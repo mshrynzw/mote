@@ -1,0 +1,20 @@
+[package]
+name = "mote"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Mote, a wavetable synthesizer. Phase 1 plays a MIDI sine tone."
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+nice-plug = { version = "0.4.2", features = ["assert_process_allocs"] }
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+strip = "symbols"

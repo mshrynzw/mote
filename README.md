@@ -7,8 +7,24 @@ Windows 11 向けのウェーブテーブル・シンセサイザーです。DAW
 
 ## いまの段階
 
-Phase 1 は、MIDI でサイン波が鳴る VST3 だけです。独自の画面、ユニゾン、フィルター、エンベロープは入れません。
-ビルド手順は、音が鳴ってからここに追記します。
+Phase 1 は、MIDI でサイン波が鳴る VST3 だけです。同時に鳴る音は 1 つで、あとから押したノートが優先されます。独自の画面、ユニゾン、フィルター、エンベロープはありません。音量は固定です。
+
+## ビルド
+
+Rust 1.88 以降が必要です。初回だけ、バンドル用のコマンドを入れます。
+
+```sh
+cargo install cargo-nice-plug --version 0.1.1 --locked
+```
+
+テストと、VST3 / CLAP の作成は次です。
+
+```sh
+cargo test
+cargo nice-plug bundle mote --release
+```
+
+成果物は `target/bundled/mote.vst3` と `target/bundled/mote.clap` です。Cubase 13 か FL Studio のプラグイン検索パスに `target/bundled` を追加するか、`mote.vst3` を VST3 フォルダへコピーして読み込みます。MIDI のノートオンでサイン波が出て、そのノートのノートオフで止まります。
 
 Phase 2 以降の範囲、日程、要件、設計の詳細は、Phase 1 が鳴ったあとに [docs/design.md](docs/design.md) の方針どおり `docs` へ足します。
 

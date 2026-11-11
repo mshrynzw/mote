@@ -19,13 +19,13 @@ MIDI でサイン波が鳴って止まる VST3。FL Studio で鳴った。完了
 
 ### Phase 2
 
-[synth.md](synth.md) と [synth.mmd](synth.mmd) のうち、Matrix を除いたもの。Oscillator、Filter、Filter Env、Amp Env、Mod Env、LFO、Master までの流れと、そこに書かれた設定項目。
+[synth.md](synth.md) と [synth.mmd](synth.mmd) のうち、Matrix を除いたもの。Oscillator、Filter、Filter Env、Amp Env、Mod Env、LFO、Master までの流れと、そこに書かれた設定項目。各 Env の Curve も含む。
 
 信号の流れとノブの名前が「最終的な姿」と食い違うときは、[synth.mmd](synth.mmd) と [synth.md](synth.md) を優先する。範囲が広いので、着手するときに中を分けてよい。
 
 ### Phase 3
 
-ブラウザで見た Main、Preset、Setting の見た目を、プラグインの画面として描き、設定を保存する。HTML と CSS は実装に使わない。Unison の点は Main の Oscillator の中に描く。
+ブラウザで見た Main、Preset、Setting の見た目を、プラグインの画面として描き、設定を保存する。HTML と CSS は実装に使わない。Main のタブは [synth.md](synth.md) に従う。Unison の点は、OSC のタブで大きく描く。
 
 ### Phase 4
 

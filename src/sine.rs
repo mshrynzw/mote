@@ -20,7 +20,7 @@ const AMPLITUDE: f32 = 0.2;
 pub struct SineVoice {
     /// 1 秒あたりのサンプル数。48_000 なら、1 秒で 48000 回 `next_sample` が呼ばれる。
     sample_rate: f32,
-    /// 波形の中の今の位置。0.0 以上 1.0 未満で、1.0 は 1 周期。
+    /// Waveの中の今の位置。0.0 以上 1.0 未満で、1.0 は 1 周期。
     phase: f32,
     /// いま鳴らしている周波数。鳴っていないときは 0。
     frequency_hz: f32,
@@ -31,7 +31,7 @@ pub struct SineVoice {
 
 // `impl 型名` の中に、その型のメソッドを書く。
 impl SineVoice {
-    /// 無音の声を作る。
+    /// 無音の Voice を作る。
     /// `Self` はこの impl の型、つまり `SineVoice` 自身を指す。
     pub fn new() -> Self {
         Self {
@@ -45,7 +45,7 @@ impl SineVoice {
     }
 
     /// DAW が選んだサンプルレートを覚える。
-    /// `&mut self` は「この声の中身を書き換えてよい」という引数。
+    /// `&mut self` は「この Voice の中身を書き換えてよい」という引数。
     pub fn set_sample_rate(&mut self, sample_rate: f32) {
         self.sample_rate = sample_rate;
     }
@@ -133,7 +133,7 @@ mod tests {
 
     const SAMPLE_RATE: f32 = 48_000.0;
 
-    /// A4（ノート 69）を押した直後の声。複数のテストで同じ準備を繰り返さないため。
+    /// A4（ノート 69）を押した直後の Voice。複数のテストで同じ準備を繰り返さないため。
     fn sounding_a4() -> SineVoice {
         let mut voice = SineVoice::new();
         voice.set_sample_rate(SAMPLE_RATE);

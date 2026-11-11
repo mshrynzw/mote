@@ -1,11 +1,11 @@
 //! Mote のプラグイン入口。
 //!
 //! `lib.rs` はライブラリのルートで、DAW が最初に読み込むファイルになる。
-//! 音の計算は `sine.rs` にあり、ここでは MIDI を受け取って左右の出力へ書き込む。
+//! 音の計算は `sine.rs` にあり、ここでは MIDI を受け取って左右のOutputへ書き込む。
 
 // `prelude` は、プラグインを書くときによく使う型やマクロをまとめて読み込む。
 use nice_plug::prelude::*;
-// 0 を許さない整数。出力チャンネル数「2」を、未設定の 0 と区別するために使う。
+// 0 を許さない整数。Outputチャンネル数「2」を、未設定の 0 と区別するために使う。
 use std::num::NonZeroU32;
 // `Arc` は複数の場所から同じ値を共有するポインタ。パラメータをホストとプラグインで共有する。
 use std::sync::Arc;
@@ -81,7 +81,7 @@ impl Plugin for Mote {
     // `env!` はビルド時に Cargo.toml の version を文字列として埋め込む。
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
-    // 入力は無し（楽器なので）、出力はステレオ 2 チャンネル。
+    // 入力は無し（楽器なので）、Outputはステレオ 2 チャンネル。
     // `..AudioIOLayout::const_default()` は、書いていない項目を既定値にする。
     const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[AudioIOLayout {
         main_input_channels: None,
@@ -172,7 +172,7 @@ impl ClapPlugin for Mote {
     const CLAP_DESCRIPTION: Option<&'static str> = Some("A sine-wave instrument");
     const CLAP_MANUAL_URL: Option<&'static str> = Some(Self::URL);
     const CLAP_SUPPORT_URL: Option<&'static str> = None;
-    // 楽器であり、シンセであり、ステレオ出力である、とホストへ伝える。
+    // 楽器であり、シンセであり、ステレオOutputである、とホストへ伝える。
     const CLAP_FEATURES: &'static [ClapFeature] = &[
         ClapFeature::Instrument,
         ClapFeature::Synthesizer,

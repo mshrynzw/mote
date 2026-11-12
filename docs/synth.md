@@ -22,7 +22,7 @@ Master、Mod Env、LFO はタブの外に残し、どのタブでも見える。
 
 4基とも同じ項目を持つ。表示名は A On、B Octave のように列の文字を付ける。初期状態でオンなのは A だけである。B、C、D はオフで、オフのあいだはその基を計算しない。
 
-範囲と初期値は、Phase 3 の Setting 画面で変えられるようにする。それまでは、ここに書いた値を本体の初期値にする。
+範囲と初期値のうち、[Setting](#setting) に書いた項目は、その画面で変えられるようにする。それまでは、ここに書いた値を本体の初期値にする。
 
 - On。A の初期値はオン。B、C、D はオフ
 
@@ -212,3 +212,35 @@ Portamento は 0 秒から 10 秒、初期値は 0 秒。短い時間の方が�
 - 作成日。保存するときに入る
 
 名前の文字列で検索する。タグを選んで絞り込む。両方を使ったときは、名前が合い、選んだタグをすべて持つものだけを出す。並べ替えは、名前、カテゴリー、作成日、Rating、作者でできる。カテゴリーやジャンルで絞り込むことは、この画面の必須にしない。
+
+## Setting
+
+Setting は、決めたノブの範囲と初期値を変える画面である。列ごとではなく、その種類のノブ全部に同じ範囲と初期値を使う。On、Type、Wave のような選択肢は置かない。LFO と Master は置かない。範囲と初期値の数値は、各節に書いたものを使う。
+
+### Oscillator
+
+- Octave
+- Note
+- Fine
+- Volume
+- Balance
+- Detune
+
+### Filter
+
+- Cutoff
+- Resonance
+- Drive
+- Amount
+
+### Envelope
+
+Amp Env、Filter Env、Mod Env で、時間と Curve の範囲は共有する。Attack の初期値だけ Amp Env は 0.001 秒で、Filter Env と Mod Env は 0 秒である。
+
+- Attack
+- Decay
+- Release
+- Sustain
+- Curve
+
+Filter Env と Mod Env だけ、Amount を持つ。

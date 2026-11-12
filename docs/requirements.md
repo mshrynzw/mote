@@ -21,7 +21,7 @@ Phase が終わったと判断する条件だけを書く。ノブの名前は [
 
 ## Phase 3
 
-Main、Preset、Setting の見た目を、ブラウザの HTML/CSS で確認してから、プラグインの画面として描き直す。HTML と CSS はプラグインの実装には使わない。ウィンドウサイズにレイアウトが追従し、[synth.md](synth.md) の設定を操作でき、その設定を保存して呼び出せる。Main は ALL と A、B、C、D のタブを持ち、A のタブではその列だけを、波形、Unison の点、エンベロープの曲線とともに大きく表示する。B、C、D も同じである。Preset の項目は [synth.md](synth.md) に従う。
+Main、Preset、Setting の見た目を、ブラウザの HTML/CSS で確認してから、プラグインの画面として描き直す。HTML と CSS はプラグインの実装には使わない。ウィンドウサイズにレイアウトが追従し、[synth.md](synth.md) の設定を操作でき、その設定を保存して呼び出せる。Main は ALL と A、B、C、D のタブを持ち、A のタブではその列だけを、波形、Unison の点、エンベロープの曲線とともに大きく表示する。B、C、D も同じである。Preset の項目と Setting の項目は [synth.md](synth.md) に従う。
 
 ## Phase 4
 

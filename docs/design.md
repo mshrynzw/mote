@@ -25,7 +25,7 @@ MIDI でサイン波が鳴って止まる VST3。FL Studio で鳴った。完了
 
 ### Phase 3
 
-ブラウザで見た Main、Preset、Setting の見た目を、プラグインの画面として描き、設定を保存する。HTML と CSS は実装に使わない。Main のタブと Preset の項目は [synth.md](synth.md) に従う。Unison の点は、A、B、C、D のタブで大きく描く。
+ブラウザで見た Main、Preset、Setting の見た目を、プラグインの画面として描き、設定を保存する。HTML と CSS は実装に使わない。Main のタブ、Preset の項目、Setting の項目は [synth.md](synth.md) に従う。Unison の点は、A、B、C、D のタブで大きく描く。
 
 ### Phase 4
 

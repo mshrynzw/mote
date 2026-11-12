@@ -11,6 +11,7 @@ use std::num::NonZeroU32;
 use std::sync::Arc;
 
 mod envelope;
+mod filter;
 mod oscillator;
 mod params;
 mod unison;
@@ -38,6 +39,7 @@ impl Default for Mote {
         // そのあとで Sync のコピー先を結ぶ。結ぶ前は、4 基の住所がまだ決まらない。
         let params = Arc::new(MoteParams::default());
         params.bind_amp_sync();
+        params.bind_filter_sync();
         Self {
             params,
             voice: NoteVoice::new(),
@@ -150,9 +152,11 @@ impl Plugin for Mote {
                 next_event = context.next_event();
             }
 
-            let (left, right) = self
-                .voice
-                .next_sample(&self.params.oscillators(), &self.params.amp_envelopes());
+            let (left, right) = self.voice.next_sample(
+                &self.params.oscillators(),
+                &self.params.filters(),
+                &self.params.amp_envelopes(),
+            );
             // 左右で値が違う。`enumerate` の 0 が左、1 が右。
             for (channel, channel_sample) in channel_samples.into_iter().enumerate() {
                 *channel_sample = if channel == 0 { left } else { right };
@@ -172,7 +176,8 @@ impl Plugin for Mote {
 // CLAP 形式で書き出すときに必要な識別子。
 impl ClapPlugin for Mote {
     const CLAP_ID: &'static str = "com.mshrynzw.mote";
-    const CLAP_DESCRIPTION: Option<&'static str> = Some("Four classic oscillators");
+    const CLAP_DESCRIPTION: Option<&'static str> =
+        Some("Classic oscillators with multimode filters");
     const CLAP_MANUAL_URL: Option<&'static str> = Some(Self::URL);
     const CLAP_SUPPORT_URL: Option<&'static str> = None;
     // 楽器であり、シンセであり、ステレオOutputである、とホストへ伝える。

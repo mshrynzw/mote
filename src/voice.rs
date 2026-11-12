@@ -1,16 +1,19 @@
 //! 1 つの MIDI ノートと、Classic のオシレーター 4 基。
 //!
 //! 同時に鳴るノートは 1 つ。最後に押したキーが残る。
+//! オンの基は、自分のフィルターを通ってから Amp Env を掛ける。
 //! 4 基の合成は、オンの本数で割って音量を揃える。
 //! ノートオフのあとは Amp Env の Release が終わるまで音が残る。
 
 use crate::envelope::{synced_amp, AmpEnvelope, AmpParams};
+use crate::filter::{synced_filter, Filter, FilterParams};
 use crate::oscillator::{OscParams, Oscillator};
 use crate::wavetable::WaveBank;
 
 /// プラグインが発音中に持つ状態。ノブは `MoteParams` 側にある。
 pub struct NoteVoice {
     oscillators: [Oscillator; 4],
+    filters: [Filter; 4],
     amps: [AmpEnvelope; 4],
     bank: WaveBank,
     sample_rate: f32,
@@ -24,6 +27,7 @@ impl NoteVoice {
     pub fn new() -> Self {
         Self {
             oscillators: std::array::from_fn(|_| Oscillator::new()),
+            filters: std::array::from_fn(|_| Filter::new()),
             amps: std::array::from_fn(|_| AmpEnvelope::new()),
             bank: WaveBank::new(48_000.0),
             sample_rate: 48_000.0,
@@ -41,6 +45,9 @@ impl NoteVoice {
     pub fn reset(&mut self) {
         for oscillator in &mut self.oscillators {
             oscillator.reset();
+        }
+        for filter in &mut self.filters {
+            filter.reset();
         }
         for amp in &mut self.amps {
             amp.reset();
@@ -89,13 +96,19 @@ impl NoteVoice {
     }
 
     /// 左右 1 サンプル。オンの基だけ足し、その本数で割る。
-    pub fn next_sample(&mut self, oscs: &[&OscParams; 4], amps: &[&AmpParams; 4]) -> (f32, f32) {
+    pub fn next_sample(
+        &mut self,
+        oscs: &[&OscParams; 4],
+        filters: &[&FilterParams; 4],
+        amps: &[&AmpParams; 4],
+    ) -> (f32, f32) {
         let mut left = 0.0;
         let mut right = 0.0;
         let mut active = 0u32;
         for (index, osc_params) in oscs.iter().enumerate() {
-            // オフの基は波形もエンベロープも進まない。
+            // オフの基は、波形もフィルターもエンベロープも進まない。
             if !osc_params.on.value() {
+                self.filters[index].silence();
                 self.amps[index].reset();
                 continue;
             }
@@ -106,9 +119,16 @@ impl NoteVoice {
                 self.note,
                 self.sample_rate,
             );
+            let (filtered_left, filtered_right) = self.filters[index].next_sample(
+                synced_filter(index, filters),
+                osc_left,
+                osc_right,
+                self.note,
+                self.sample_rate,
+            );
             let env = self.amps[index].next(synced_amp(index, amps).settings(), self.sample_rate);
-            left += osc_left * env;
-            right += osc_right * env;
+            left += filtered_left * env;
+            right += filtered_right * env;
         }
         if !self.held && self.amps.iter().all(|amp| !amp.is_busy()) {
             self.note = None;
@@ -142,12 +162,13 @@ mod tests {
         voice.set_sample_rate(48_000.0);
         let knobs = params();
         let oscs = knobs.oscillators();
+        let filters = knobs.filters();
         let amps = knobs.amp_envelopes();
         voice.note_on(69, 1.0, &oscs);
 
         let mut heard = false;
         for _ in 0..32 {
-            let (left, right) = voice.next_sample(&oscs, &amps);
+            let (left, right) = voice.next_sample(&oscs, &filters, &amps);
             if left.abs() > 0.0001 || right.abs() > 0.0001 {
                 heard = true;
             }
@@ -158,12 +179,42 @@ mod tests {
         assert!(voice.is_sounding());
         // Release の初期値は 0.05 秒。48 kHz なら 2400 サンプルより少し多く回せば消える。
         for _ in 0..4_000 {
-            voice.next_sample(&oscs, &amps);
+            voice.next_sample(&oscs, &filters, &amps);
         }
-        let (left, right) = voice.next_sample(&oscs, &amps);
+        let (left, right) = voice.next_sample(&oscs, &filters, &amps);
         assert!(!voice.is_sounding());
         assert_eq!(left, 0.0);
         assert_eq!(right, 0.0);
+    }
+
+    #[test]
+    fn low_cutoff_quiets_a_high_note() {
+        use nice_plug::params::InternalParamMut;
+
+        fn energy(cutoff: f32) -> f32 {
+            let mut voice = NoteVoice::new();
+            voice.set_sample_rate(48_000.0);
+            let knobs = params();
+            unsafe {
+                let _ = InternalParamMut::_internal_set_plain_value(&knobs.filter1.cutoff, cutoff);
+            }
+            let oscs = knobs.oscillators();
+            let filters = knobs.filters();
+            let amps = knobs.amp_envelopes();
+            voice.note_on(90, 1.0, &oscs);
+            let mut sum = 0.0;
+            for i in 0..4_000 {
+                let (left, right) = voice.next_sample(&oscs, &filters, &amps);
+                if i > 2_000 {
+                    sum += left * left + right * right;
+                }
+            }
+            sum
+        }
+
+        let open = energy(20_000.0);
+        let closed = energy(200.0);
+        assert!(open > closed * 4.0, "open {open}, closed {closed}");
     }
 
     #[test]

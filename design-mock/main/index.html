@@ -8,7 +8,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600&family=Unbounded:wght@500&display=swap">
 <style>
-/* Layout: four voice chains run left to right into one bus that feeds the Master.
+/* Layout: tabs ALL and A-D. A-D show one chain, with the wave, unison, and
+   envelope curves beside the knobs. ALL lists every chain without those large drawings.
+   Master, Mod Env, and LFO stay in view on every tab.
    Mod Env A-D and LFO A-D sit apart below, with no wires.
    Mood: a soft light hangs above the instrument. Dust motes drift through it, the solid
    panels break it into shafts, and each panel edge catches it on the side that faces it.
@@ -78,7 +80,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--side);
-  grid-template-areas: "chains side" "mods mods";
+  grid-template-areas: "tabs side" "chains side" "mods mods";
   gap: var(--row-gap) 12px;
   max-width: 1000px;
   margin: 0 auto;
@@ -108,6 +110,32 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           mask: linear-gradient(var(--bg) 0 0) content-box exclude, linear-gradient(var(--bg) 0 0);
   opacity: calc(.62 + .38 * var(--lit));
 }
+
+.tabs {
+  grid-area: tabs;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  align-self: end;
+}
+.tabs button {
+  appearance: none;
+  margin: 0;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 600 12px/1 var(--font-ui);
+  letter-spacing: .08em;
+  cursor: pointer;
+}
+.tabs button.on {
+  border-color: var(--on);
+  color: var(--on);
+  box-shadow: 0 0 12px rgb(159 197 233 / .35);
+}
+.tabs button:focus-visible { outline: 1px solid var(--on); outline-offset: 2px; }
 
 .brand {
   grid-area: side;
@@ -139,6 +167,17 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
   padding-right: var(--bus);
 }
 .chain, .post { display: flex; flex-wrap: wrap; gap: var(--gap); }
+.synth[data-tab="a"] .chain:not([data-chain="a"]),
+.synth[data-tab="b"] .chain:not([data-chain="b"]),
+.synth[data-tab="c"] .chain:not([data-chain="c"]),
+.synth[data-tab="d"] .chain:not([data-chain="d"]) { display: none; }
+.synth:not([data-tab="all"]) .chain {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 320px);
+  align-items: stretch;
+}
+.synth:not([data-tab="all"]) .chain > .post { grid-column: 1 / -1; }
+.synth:not([data-tab="all"]) .chain::before { display: none; }
 .chain { position: relative; }
 .chain > *, .post > * { flex: 0 1 auto; min-width: 0; }
 
@@ -281,14 +320,37 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
 .cells > .shift { grid-column: 2 / span 2; }
 .cells > .wide { grid-column: 1 / -1; }
 .rcells {
-  display: grid;
-  grid-template-columns: repeat(5, var(--cell));
+  display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  row-gap: 6px;
+  gap: 6px 4px;
 }
+.rcells > .ctl { width: 46px; }
 
 .ctl { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; }
 .ctl > span { font: 500 10.5px/12px var(--font-ui); text-align: center; white-space: nowrap; }
+.ctl.menu { width: 84px; }
+.ctl.menu.wide { width: 108px; }
+.ctl.menu.short { width: 54px; }
+.pick {
+  appearance: none;
+  width: 100%;
+  height: 22px;
+  margin-top: 2px;
+  padding: 0 14px 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background-color: var(--bg);
+  background-image: linear-gradient(45deg, transparent 50%, var(--line) 50%), linear-gradient(135deg, var(--line) 50%, transparent 50%);
+  background-position: right 8px center, right 4px center;
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+  color: var(--on);
+  font: 500 10px/20px var(--font-ui);
+  cursor: pointer;
+}
+.pick:focus-visible { outline: 1px solid var(--on); outline-offset: 2px; }
+.pick option { color: var(--ink); background: rgb(15 24 57); }
 
 /* ---------- Knob: pearl cap, light-blue value arc ---------- */
 .k {
@@ -325,6 +387,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           mask: conic-gradient(var(--bg) 0 var(--a), transparent 0);
 }
 .k.big { --d: 40px; --ring: 4px; --cap: 12px; --pr: 7px; }
+.k.live { cursor: ns-resize; touch-action: none; }
 
 /* ---------- Toggle and switch ---------- */
 .t {
@@ -361,6 +424,10 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
 .groups { display: flex; flex-wrap: wrap; gap: 10px 6px; }
 .grp { display: flex; flex-direction: column; gap: 4px; }
 .osc .cells { --cols: 4; }
+.synth:not([data-tab="all"]) .osc .uni { display: none; }
+.osc .grp:has(.menu) .cells { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 6px; }
+.osc .grp:has(.menu) .ctl { width: 44px; }
+.osc .grp:has(.menu) .ctl.menu { width: 84px; }
 .gl {
   display: flex;
   align-items: center;
@@ -411,6 +478,18 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
 @keyframes uni-spread { from { --spread: .8; } to { --spread: 1.04; } }
 @keyframes uni-drift { from { transform: translate(0, 0); } to { transform: translate(var(--wx), var(--wy)); } }
 @keyframes uni-twinkle { from { opacity: .72; } to { opacity: 1; } }
+.draw { display: none; flex-direction: column; gap: 8px; }
+.synth:not([data-tab="all"]) .draw { display: flex; }
+.wave, .env-lg, .plot, .response { width: 100%; color: var(--on); }
+.wave path, .plot path, .response .curve { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.response { display: block; height: 46px; }
+.response .grid { fill: none; stroke: rgb(164 182 183 / .45); stroke-width: 1; }
+.wave { display: block; height: 78px; }
+.env-lg { display: none; height: 56px; }
+.synth:not([data-tab="all"]) .env-lg { display: block; }
+.plot { display: block; height: 22px; }
+.uni.lg { flex: 1; height: auto; min-height: 112px; }
+.uni.lg i { translate: calc(var(--px) * var(--spread) * 72px) calc(var(--py) * var(--spread) * -40px); }
 .ax {
   position: absolute;
   font: 600 8px/8px var(--font-ui);
@@ -430,7 +509,9 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
   white-space: nowrap;
 }
 .route svg { width: 12px; height: 8px; fill: none; stroke: var(--on); stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
-.post > .panel:first-child .cells { --cols: 10; }
+.post > .panel:first-child .cells { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 6px; }
+.post > .panel:first-child .ctl { width: 44px; }
+.post > .panel:first-child .ctl.menu { width: 84px; }
 .fenv .cells { --cols: 10; }
 .amp .cells { --cols: 8; --cell: 51px; }
 
@@ -474,7 +555,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
 @container stage (width < 1000px) {
   .synth {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "brand" "chains" "master" "mods";
+    grid-template-areas: "brand" "tabs" "chains" "master" "mods";
   }
   .brand { grid-area: brand; }
   .master { grid-area: master; align-self: stretch; }
@@ -513,6 +594,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
 @container stage (width < 852px) {
   .chains { padding-right: 0; row-gap: 28px; }
   .chain, .post { justify-content: center; }
+  .synth:not([data-tab="all"]) .chain { grid-template-columns: minmax(0, 1fr); }
   .chain::before, .chains::after, .feed { display: none; }
 }
 @container stage (width < 510px) {
@@ -529,19 +611,28 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
 <svg class="defs" aria-hidden="true">
   <symbol id="lk" viewBox="0 0 24 24"><path d="M9 17H7A5 5 0 0 1 7 7h2M15 7h2a5 5 0 0 1 0 10h-2M8 12h8"/></symbol>
   <symbol id="ar" viewBox="0 0 12 8"><path d="M1 4h9.5M7.5 1l3 3-3 3"/></symbol>
+  <symbol id="sine" viewBox="0 0 160 64"><path d="M0 32C18 32 18 8 40 8s22 48 40 48 18-48 40-48 22 24 40 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="adsr" viewBox="0 0 160 64"><path d="M4 58L14 10h104l30 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </svg>
 
 <canvas id="sky" aria-hidden="true"></canvas>
 
 <main class="stage">
-<div class="synth">
+<div class="synth" data-tab="a">
 
 <h1 class="brand">Mote</h1>
+<nav class="tabs" aria-label="Chains">
+  <button type="button" data-tab="all" aria-pressed="false">ALL</button>
+  <button type="button" class="on" data-tab="a" aria-pressed="true">A</button>
+  <button type="button" data-tab="b" aria-pressed="false">B</button>
+  <button type="button" data-tab="c" aria-pressed="false">C</button>
+  <button type="button" data-tab="d" aria-pressed="false">D</button>
+</nav>
 
 <div class="chains">
 
   <!-- Chain 1 -->
-  <div class="chain" role="group" aria-label="Voice chain A">
+  <div class="chain" role="group" data-chain="a" aria-label="Voice chain A">
     <section class="panel osc">
       <h2>Oscillator A</h2>
       <div class="groups">
@@ -565,7 +656,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           <h3 class="gl">Wave</h3>
           <div class="cells">
             <div class="ctl"><i class="t on"></i><span>On</span></div>
-            <div class="ctl"><i class="k" style="--a:-54deg"></i><span>Wave</span></div>
+            <div class="ctl menu"><select class="pick" data-kind="osc-wave" aria-label="Wave"><option value="sine" selected>Sine</option><option value="triangle">Triangle</option><option value="saw">Saw</option><option value="pulse">Pulse</option></select><span>Wave</span></div>
             <div class="ctl"><i class="k" style="--a:-96deg"></i><span>Phase</span></div>
             <div class="ctl"><i class="t"></i><span>Inv</span></div>
             <div class="ctl"><i class="t"></i><span>Retrigger</span></div>
@@ -590,6 +681,20 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
         </div>
       </div>
     </section>
+    <section class="panel draw" aria-label="Wave and unison">
+      <h2>Wave</h2>
+      <svg class="wave" viewBox="0 0 160 64" aria-hidden="true"><path d=""/></svg>
+      <div class="uni lg" role="img" aria-label="Unison voices: pan runs left to right, detune runs bottom to top">
+        <span class="ax y">Detune</span><span class="ax x">Pan</span>
+        <i style="--px:.9;--py:1;--wx:-1.4px;--wy:1px;--dur:9.5s;--del:-1s"></i>
+        <i style="--px:.3;--py:.667;--wx:1.2px;--wy:-1.2px;--dur:12s;--del:-4s"></i>
+        <i style="--px:.6;--py:.333;--wx:-1px;--wy:-1.2px;--dur:10.5s;--del:-7s"></i>
+        <i style="--px:0;--py:0;--wx:1.4px;--wy:.8px;--dur:13s;--del:-2s"></i>
+        <i style="--px:-.6;--py:-.333;--wx:1px;--wy:1.2px;--dur:11s;--del:-5s"></i>
+        <i style="--px:-.3;--py:-.667;--wx:-1.2px;--wy:1.2px;--dur:9s;--del:-3s"></i>
+        <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
+      </div>
+    </section>
     <div class="post">
       <section class="panel">
         <h2>Filter A</h2>
@@ -599,12 +704,13 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           <span class="sync" title="Sync C">C</span>
           <span class="sync" title="Sync D">D</span>
         </div>
+        <svg class="response" viewBox="0 0 160 48" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
         <div class="cells">
-          <div class="ctl"><i class="k" style="--a:-81deg"></i><span>Type</span></div>
+          <div class="ctl menu"><select class="pick" data-kind="filter" aria-label="Type"><option value="lowpass" selected>Lowpass</option><option value="highpass">Highpass</option><option value="bandpass">Bandpass</option><option value="notch">Notch</option></select><span>Type</span></div>
           <div class="ctl"><i class="k" style="--a:27deg"></i><span>Amount</span></div>
           <div class="ctl"><i class="k" style="--a:-68deg"></i><span>Drive</span></div>
-          <div class="ctl"><i class="k" style="--a:50deg"></i><span>Cutoff</span></div>
-          <div class="ctl"><i class="k" style="--a:-40deg"></i><span>Resonance</span></div>
+          <div class="ctl"><i class="k live" style="--a:135deg"></i><span>Cutoff</span></div>
+          <div class="ctl"><i class="k live" style="--a:-135deg"></i><span>Resonance</span></div>
         </div>
       </section>
       <section class="panel fenv">
@@ -616,6 +722,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           <span class="sync" title="Sync D">D</span>
         </div>
         <p class="route"><svg aria-hidden="true"><use href="#ar"/></svg>Filter A Cutoff</p>
+        <svg class="env-lg" viewBox="0 0 160 64" aria-hidden="true"><use href="#adsr"/></svg>
         <div class="cells">
           <div class="ctl"><i class="k" style="--a:-118deg"></i><span>Attack</span></div>
           <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
@@ -636,6 +743,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           <span class="sync" title="Sync C">C</span>
           <span class="sync" title="Sync D">D</span>
         </div>
+        <svg class="env-lg" viewBox="0 0 160 64" aria-hidden="true"><use href="#adsr"/></svg>
         <div class="cells">
           <div class="ctl"><i class="k" style="--a:-128deg"></i><span>Attack</span></div>
           <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
@@ -651,7 +759,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
   </div>
 
   <!-- Chain 2 -->
-  <div class="chain" role="group" aria-label="Voice chain B">
+  <div class="chain" role="group" data-chain="b" aria-label="Voice chain B">
     <section class="panel osc">
       <h2>Oscillator B</h2>
       <div class="groups">
@@ -675,7 +783,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           <h3 class="gl">Wave</h3>
           <div class="cells">
             <div class="ctl"><i class="t"></i><span>On</span></div>
-            <div class="ctl"><i class="k" style="--a:-54deg"></i><span>Wave</span></div>
+            <div class="ctl menu"><select class="pick" data-kind="osc-wave" aria-label="Wave"><option value="sine" selected>Sine</option><option value="triangle">Triangle</option><option value="saw">Saw</option><option value="pulse">Pulse</option></select><span>Wave</span></div>
             <div class="ctl"><i class="k" style="--a:-96deg"></i><span>Phase</span></div>
             <div class="ctl"><i class="t"></i><span>Inv</span></div>
             <div class="ctl"><i class="t"></i><span>Retrigger</span></div>
@@ -700,20 +808,36 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
         </div>
       </div>
     </section>
+    <section class="panel draw" aria-label="Wave and unison">
+      <h2>Wave</h2>
+      <svg class="wave" viewBox="0 0 160 64" aria-hidden="true"><path d=""/></svg>
+      <div class="uni lg" role="img" aria-label="Unison voices: pan runs left to right, detune runs bottom to top">
+        <span class="ax y">Detune</span><span class="ax x">Pan</span>
+        <i style="--px:.9;--py:1;--wx:-1.4px;--wy:1px;--dur:9.5s;--del:-1s"></i>
+        <i style="--px:.3;--py:.667;--wx:1.2px;--wy:-1.2px;--dur:12s;--del:-4s"></i>
+        <i style="--px:.6;--py:.333;--wx:-1px;--wy:-1.2px;--dur:10.5s;--del:-7s"></i>
+        <i style="--px:0;--py:0;--wx:1.4px;--wy:.8px;--dur:13s;--del:-2s"></i>
+        <i style="--px:-.6;--py:-.333;--wx:1px;--wy:1.2px;--dur:11s;--del:-5s"></i>
+        <i style="--px:-.3;--py:-.667;--wx:-1.2px;--wy:1.2px;--dur:9s;--del:-3s"></i>
+        <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
+      </div>
+    </section>
     <div class="post">
       <section class="panel">
         <h2>Filter B</h2>
+        <svg class="response" viewBox="0 0 160 48" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
         <div class="cells">
-          <div class="ctl"><i class="k" style="--a:-81deg"></i><span>Type</span></div>
+          <div class="ctl menu"><select class="pick" data-kind="filter" aria-label="Type"><option value="lowpass" selected>Lowpass</option><option value="highpass">Highpass</option><option value="bandpass">Bandpass</option><option value="notch">Notch</option></select><span>Type</span></div>
           <div class="ctl"><i class="k" style="--a:27deg"></i><span>Amount</span></div>
           <div class="ctl"><i class="k" style="--a:-68deg"></i><span>Drive</span></div>
-          <div class="ctl"><i class="k" style="--a:50deg"></i><span>Cutoff</span></div>
-          <div class="ctl"><i class="k" style="--a:-40deg"></i><span>Resonance</span></div>
+          <div class="ctl"><i class="k live" style="--a:135deg"></i><span>Cutoff</span></div>
+          <div class="ctl"><i class="k live" style="--a:-135deg"></i><span>Resonance</span></div>
         </div>
       </section>
       <section class="panel fenv">
         <h2>Filter Env B</h2>
         <p class="route"><svg aria-hidden="true"><use href="#ar"/></svg>Filter B Cutoff</p>
+        <svg class="env-lg" viewBox="0 0 160 64" aria-hidden="true"><use href="#adsr"/></svg>
         <div class="cells">
           <div class="ctl"><i class="k" style="--a:-118deg"></i><span>Attack</span></div>
           <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
@@ -728,6 +852,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
       </section>
       <section class="panel amp">
         <h2>Amp Env B</h2>
+        <svg class="env-lg" viewBox="0 0 160 64" aria-hidden="true"><use href="#adsr"/></svg>
         <div class="cells">
           <div class="ctl"><i class="k" style="--a:-128deg"></i><span>Attack</span></div>
           <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
@@ -743,7 +868,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
   </div>
 
   <!-- Chain 3 -->
-  <div class="chain" role="group" aria-label="Voice chain C">
+  <div class="chain" role="group" data-chain="c" aria-label="Voice chain C">
     <section class="panel osc">
       <h2>Oscillator C</h2>
       <div class="groups">
@@ -767,7 +892,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           <h3 class="gl">Wave</h3>
           <div class="cells">
             <div class="ctl"><i class="t"></i><span>On</span></div>
-            <div class="ctl"><i class="k" style="--a:-54deg"></i><span>Wave</span></div>
+            <div class="ctl menu"><select class="pick" data-kind="osc-wave" aria-label="Wave"><option value="sine" selected>Sine</option><option value="triangle">Triangle</option><option value="saw">Saw</option><option value="pulse">Pulse</option></select><span>Wave</span></div>
             <div class="ctl"><i class="k" style="--a:-96deg"></i><span>Phase</span></div>
             <div class="ctl"><i class="t"></i><span>Inv</span></div>
             <div class="ctl"><i class="t"></i><span>Retrigger</span></div>
@@ -792,20 +917,36 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
         </div>
       </div>
     </section>
+    <section class="panel draw" aria-label="Wave and unison">
+      <h2>Wave</h2>
+      <svg class="wave" viewBox="0 0 160 64" aria-hidden="true"><path d=""/></svg>
+      <div class="uni lg" role="img" aria-label="Unison voices: pan runs left to right, detune runs bottom to top">
+        <span class="ax y">Detune</span><span class="ax x">Pan</span>
+        <i style="--px:.9;--py:1;--wx:-1.4px;--wy:1px;--dur:9.5s;--del:-1s"></i>
+        <i style="--px:.3;--py:.667;--wx:1.2px;--wy:-1.2px;--dur:12s;--del:-4s"></i>
+        <i style="--px:.6;--py:.333;--wx:-1px;--wy:-1.2px;--dur:10.5s;--del:-7s"></i>
+        <i style="--px:0;--py:0;--wx:1.4px;--wy:.8px;--dur:13s;--del:-2s"></i>
+        <i style="--px:-.6;--py:-.333;--wx:1px;--wy:1.2px;--dur:11s;--del:-5s"></i>
+        <i style="--px:-.3;--py:-.667;--wx:-1.2px;--wy:1.2px;--dur:9s;--del:-3s"></i>
+        <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
+      </div>
+    </section>
     <div class="post">
       <section class="panel">
         <h2>Filter C</h2>
+        <svg class="response" viewBox="0 0 160 48" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
         <div class="cells">
-          <div class="ctl"><i class="k" style="--a:-81deg"></i><span>Type</span></div>
+          <div class="ctl menu"><select class="pick" data-kind="filter" aria-label="Type"><option value="lowpass" selected>Lowpass</option><option value="highpass">Highpass</option><option value="bandpass">Bandpass</option><option value="notch">Notch</option></select><span>Type</span></div>
           <div class="ctl"><i class="k" style="--a:27deg"></i><span>Amount</span></div>
           <div class="ctl"><i class="k" style="--a:-68deg"></i><span>Drive</span></div>
-          <div class="ctl"><i class="k" style="--a:50deg"></i><span>Cutoff</span></div>
-          <div class="ctl"><i class="k" style="--a:-40deg"></i><span>Resonance</span></div>
+          <div class="ctl"><i class="k live" style="--a:135deg"></i><span>Cutoff</span></div>
+          <div class="ctl"><i class="k live" style="--a:-135deg"></i><span>Resonance</span></div>
         </div>
       </section>
       <section class="panel fenv">
         <h2>Filter Env C</h2>
         <p class="route"><svg aria-hidden="true"><use href="#ar"/></svg>Filter C Cutoff</p>
+        <svg class="env-lg" viewBox="0 0 160 64" aria-hidden="true"><use href="#adsr"/></svg>
         <div class="cells">
           <div class="ctl"><i class="k" style="--a:-118deg"></i><span>Attack</span></div>
           <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
@@ -820,6 +961,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
       </section>
       <section class="panel amp">
         <h2>Amp Env C</h2>
+        <svg class="env-lg" viewBox="0 0 160 64" aria-hidden="true"><use href="#adsr"/></svg>
         <div class="cells">
           <div class="ctl"><i class="k" style="--a:-128deg"></i><span>Attack</span></div>
           <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
@@ -835,7 +977,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
   </div>
 
   <!-- Chain 4 -->
-  <div class="chain" role="group" aria-label="Voice chain D">
+  <div class="chain" role="group" data-chain="d" aria-label="Voice chain D">
     <section class="panel osc">
       <h2>Oscillator D</h2>
       <div class="groups">
@@ -859,7 +1001,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           <h3 class="gl">Wave</h3>
           <div class="cells">
             <div class="ctl"><i class="t"></i><span>On</span></div>
-            <div class="ctl"><i class="k" style="--a:-54deg"></i><span>Wave</span></div>
+            <div class="ctl menu"><select class="pick" data-kind="osc-wave" aria-label="Wave"><option value="sine" selected>Sine</option><option value="triangle">Triangle</option><option value="saw">Saw</option><option value="pulse">Pulse</option></select><span>Wave</span></div>
             <div class="ctl"><i class="k" style="--a:-96deg"></i><span>Phase</span></div>
             <div class="ctl"><i class="t"></i><span>Inv</span></div>
             <div class="ctl"><i class="t"></i><span>Retrigger</span></div>
@@ -884,20 +1026,36 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
         </div>
       </div>
     </section>
+    <section class="panel draw" aria-label="Wave and unison">
+      <h2>Wave</h2>
+      <svg class="wave" viewBox="0 0 160 64" aria-hidden="true"><path d=""/></svg>
+      <div class="uni lg" role="img" aria-label="Unison voices: pan runs left to right, detune runs bottom to top">
+        <span class="ax y">Detune</span><span class="ax x">Pan</span>
+        <i style="--px:.9;--py:1;--wx:-1.4px;--wy:1px;--dur:9.5s;--del:-1s"></i>
+        <i style="--px:.3;--py:.667;--wx:1.2px;--wy:-1.2px;--dur:12s;--del:-4s"></i>
+        <i style="--px:.6;--py:.333;--wx:-1px;--wy:-1.2px;--dur:10.5s;--del:-7s"></i>
+        <i style="--px:0;--py:0;--wx:1.4px;--wy:.8px;--dur:13s;--del:-2s"></i>
+        <i style="--px:-.6;--py:-.333;--wx:1px;--wy:1.2px;--dur:11s;--del:-5s"></i>
+        <i style="--px:-.3;--py:-.667;--wx:-1.2px;--wy:1.2px;--dur:9s;--del:-3s"></i>
+        <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
+      </div>
+    </section>
     <div class="post">
       <section class="panel">
         <h2>Filter D</h2>
+        <svg class="response" viewBox="0 0 160 48" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
         <div class="cells">
-          <div class="ctl"><i class="k" style="--a:-81deg"></i><span>Type</span></div>
+          <div class="ctl menu"><select class="pick" data-kind="filter" aria-label="Type"><option value="lowpass" selected>Lowpass</option><option value="highpass">Highpass</option><option value="bandpass">Bandpass</option><option value="notch">Notch</option></select><span>Type</span></div>
           <div class="ctl"><i class="k" style="--a:27deg"></i><span>Amount</span></div>
           <div class="ctl"><i class="k" style="--a:-68deg"></i><span>Drive</span></div>
-          <div class="ctl"><i class="k" style="--a:50deg"></i><span>Cutoff</span></div>
-          <div class="ctl"><i class="k" style="--a:-40deg"></i><span>Resonance</span></div>
+          <div class="ctl"><i class="k live" style="--a:135deg"></i><span>Cutoff</span></div>
+          <div class="ctl"><i class="k live" style="--a:-135deg"></i><span>Resonance</span></div>
         </div>
       </section>
       <section class="panel fenv">
         <h2>Filter Env D</h2>
         <p class="route"><svg aria-hidden="true"><use href="#ar"/></svg>Filter D Cutoff</p>
+        <svg class="env-lg" viewBox="0 0 160 64" aria-hidden="true"><use href="#adsr"/></svg>
         <div class="cells">
           <div class="ctl"><i class="k" style="--a:-118deg"></i><span>Attack</span></div>
           <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
@@ -912,6 +1070,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
       </section>
       <section class="panel amp">
         <h2>Amp Env D</h2>
+        <svg class="env-lg" viewBox="0 0 160 64" aria-hidden="true"><use href="#adsr"/></svg>
         <div class="cells">
           <div class="ctl"><i class="k" style="--a:-128deg"></i><span>Attack</span></div>
           <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
@@ -952,6 +1111,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
       <span class="sync" title="Sync C">C</span>
       <span class="sync" title="Sync D">D</span>
     </div>
+    <svg class="plot" viewBox="0 0 160 64" aria-hidden="true"><use href="#adsr"/></svg>
     <div class="rcells">
       <div class="ctl"><i class="k" style="--a:-104deg"></i><span>Attack</span></div>
       <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
@@ -962,12 +1122,13 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
       <div class="ctl"><i class="k" style="--a:-50deg"></i><span>Release</span></div>
       <div class="ctl"><i class="k bi"></i><span>Release<br>Curve</span></div>
       <div class="ctl"><i class="k" style="--a:30deg"></i><span>Amount</span></div>
-      <div class="ctl"><i class="k" style="--a:-90deg"></i><span>Target</span></div>
-      <div class="ctl"><i class="k" style="--a:-20deg"></i><span>Chain</span></div>
+      <div class="ctl menu"><select class="pick" aria-label="Target"><option value="off" selected>Off</option><option value="pitch">Pitch</option><option value="volume">Volume</option><option value="pan">Pan</option><option value="cutoff">Cutoff</option><option value="resonance">Resonance</option><option value="amp">Amp</option></select><span>Target</span></div>
+      <div class="ctl menu short"><select class="pick" aria-label="Chain"><option value="all" selected>All</option><option>A</option><option>B</option><option>C</option><option>D</option></select><span>Chain</span></div>
     </div>
   </section>
   <section class="panel">
     <h2>Mod Env B</h2>
+    <svg class="plot" viewBox="0 0 160 64" aria-hidden="true"><use href="#adsr"/></svg>
     <div class="rcells">
       <div class="ctl"><i class="k" style="--a:-104deg"></i><span>Attack</span></div>
       <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
@@ -978,12 +1139,13 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
       <div class="ctl"><i class="k" style="--a:-50deg"></i><span>Release</span></div>
       <div class="ctl"><i class="k bi"></i><span>Release<br>Curve</span></div>
       <div class="ctl"><i class="k" style="--a:30deg"></i><span>Amount</span></div>
-      <div class="ctl"><i class="k" style="--a:-90deg"></i><span>Target</span></div>
-      <div class="ctl"><i class="k" style="--a:-20deg"></i><span>Chain</span></div>
+      <div class="ctl menu"><select class="pick" aria-label="Target"><option value="off" selected>Off</option><option value="pitch">Pitch</option><option value="volume">Volume</option><option value="pan">Pan</option><option value="cutoff">Cutoff</option><option value="resonance">Resonance</option><option value="amp">Amp</option></select><span>Target</span></div>
+      <div class="ctl menu short"><select class="pick" aria-label="Chain"><option value="all" selected>All</option><option>A</option><option>B</option><option>C</option><option>D</option></select><span>Chain</span></div>
     </div>
   </section>
   <section class="panel">
     <h2>Mod Env C</h2>
+    <svg class="plot" viewBox="0 0 160 64" aria-hidden="true"><use href="#adsr"/></svg>
     <div class="rcells">
       <div class="ctl"><i class="k" style="--a:-104deg"></i><span>Attack</span></div>
       <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
@@ -994,12 +1156,13 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
       <div class="ctl"><i class="k" style="--a:-50deg"></i><span>Release</span></div>
       <div class="ctl"><i class="k bi"></i><span>Release<br>Curve</span></div>
       <div class="ctl"><i class="k" style="--a:30deg"></i><span>Amount</span></div>
-      <div class="ctl"><i class="k" style="--a:-90deg"></i><span>Target</span></div>
-      <div class="ctl"><i class="k" style="--a:-20deg"></i><span>Chain</span></div>
+      <div class="ctl menu"><select class="pick" aria-label="Target"><option value="off" selected>Off</option><option value="pitch">Pitch</option><option value="volume">Volume</option><option value="pan">Pan</option><option value="cutoff">Cutoff</option><option value="resonance">Resonance</option><option value="amp">Amp</option></select><span>Target</span></div>
+      <div class="ctl menu short"><select class="pick" aria-label="Chain"><option value="all" selected>All</option><option>A</option><option>B</option><option>C</option><option>D</option></select><span>Chain</span></div>
     </div>
   </section>
   <section class="panel">
     <h2>Mod Env D</h2>
+    <svg class="plot" viewBox="0 0 160 64" aria-hidden="true"><use href="#adsr"/></svg>
     <div class="rcells">
       <div class="ctl"><i class="k" style="--a:-104deg"></i><span>Attack</span></div>
       <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
@@ -1010,8 +1173,8 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
       <div class="ctl"><i class="k" style="--a:-50deg"></i><span>Release</span></div>
       <div class="ctl"><i class="k bi"></i><span>Release<br>Curve</span></div>
       <div class="ctl"><i class="k" style="--a:30deg"></i><span>Amount</span></div>
-      <div class="ctl"><i class="k" style="--a:-90deg"></i><span>Target</span></div>
-      <div class="ctl"><i class="k" style="--a:-20deg"></i><span>Chain</span></div>
+      <div class="ctl menu"><select class="pick" aria-label="Target"><option value="off" selected>Off</option><option value="pitch">Pitch</option><option value="volume">Volume</option><option value="pan">Pan</option><option value="cutoff">Cutoff</option><option value="resonance">Resonance</option><option value="amp">Amp</option></select><span>Target</span></div>
+      <div class="ctl menu short"><select class="pick" aria-label="Chain"><option value="all" selected>All</option><option>A</option><option>B</option><option>C</option><option>D</option></select><span>Chain</span></div>
     </div>
   </section>
 
@@ -1023,54 +1186,58 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
       <span class="sync" title="Sync C">C</span>
       <span class="sync" title="Sync D">D</span>
     </div>
+    <svg class="plot lfo-plot" viewBox="0 0 160 64" aria-hidden="true"><path d=""/></svg>
     <div class="rcells">
-      <div class="ctl"><i class="k" style="--a:-40deg"></i><span>Wave</span></div>
+      <div class="ctl menu wide"><select class="pick" data-kind="lfo-wave" aria-label="Wave"><option value="sine" selected>Sine</option><option value="triangle">Triangle</option><option value="saw">Saw</option><option value="square">Square</option><option value="hold">Sample &amp; Hold</option></select><span>Wave</span></div>
       <div class="ctl"><i class="k" style="--a:22deg"></i><span>Rate</span></div>
       <div class="ctl" title="Match the host tempo"><i class="t"></i><span>Tempo</span></div>
       <div class="ctl"><i class="k" style="--a:-100deg"></i><span>Phase</span></div>
       <div class="ctl"><i class="t"></i><span>Retrigger</span></div>
       <div class="ctl"><i class="k" style="--a:34deg"></i><span>Amount</span></div>
-      <div class="ctl"><i class="k" style="--a:-90deg"></i><span>Target</span></div>
-      <div class="ctl"><i class="k" style="--a:-20deg"></i><span>Chain</span></div>
+      <div class="ctl menu"><select class="pick" aria-label="Target"><option value="off" selected>Off</option><option value="pitch">Pitch</option><option value="volume">Volume</option><option value="pan">Pan</option><option value="cutoff">Cutoff</option><option value="resonance">Resonance</option><option value="amp">Amp</option></select><span>Target</span></div>
+      <div class="ctl menu short"><select class="pick" aria-label="Chain"><option value="all" selected>All</option><option>A</option><option>B</option><option>C</option><option>D</option></select><span>Chain</span></div>
     </div>
   </section>
   <section class="panel lfo">
     <h2>LFO B</h2>
+    <svg class="plot lfo-plot" viewBox="0 0 160 64" aria-hidden="true"><path d=""/></svg>
     <div class="rcells">
-      <div class="ctl"><i class="k" style="--a:-40deg"></i><span>Wave</span></div>
+      <div class="ctl menu wide"><select class="pick" data-kind="lfo-wave" aria-label="Wave"><option value="sine" selected>Sine</option><option value="triangle">Triangle</option><option value="saw">Saw</option><option value="square">Square</option><option value="hold">Sample &amp; Hold</option></select><span>Wave</span></div>
       <div class="ctl"><i class="k" style="--a:22deg"></i><span>Rate</span></div>
       <div class="ctl" title="Match the host tempo"><i class="t"></i><span>Tempo</span></div>
       <div class="ctl"><i class="k" style="--a:-100deg"></i><span>Phase</span></div>
       <div class="ctl"><i class="t"></i><span>Retrigger</span></div>
       <div class="ctl"><i class="k" style="--a:34deg"></i><span>Amount</span></div>
-      <div class="ctl"><i class="k" style="--a:-90deg"></i><span>Target</span></div>
-      <div class="ctl"><i class="k" style="--a:-20deg"></i><span>Chain</span></div>
+      <div class="ctl menu"><select class="pick" aria-label="Target"><option value="off" selected>Off</option><option value="pitch">Pitch</option><option value="volume">Volume</option><option value="pan">Pan</option><option value="cutoff">Cutoff</option><option value="resonance">Resonance</option><option value="amp">Amp</option></select><span>Target</span></div>
+      <div class="ctl menu short"><select class="pick" aria-label="Chain"><option value="all" selected>All</option><option>A</option><option>B</option><option>C</option><option>D</option></select><span>Chain</span></div>
     </div>
   </section>
   <section class="panel lfo">
     <h2>LFO C</h2>
+    <svg class="plot lfo-plot" viewBox="0 0 160 64" aria-hidden="true"><path d=""/></svg>
     <div class="rcells">
-      <div class="ctl"><i class="k" style="--a:-40deg"></i><span>Wave</span></div>
+      <div class="ctl menu wide"><select class="pick" data-kind="lfo-wave" aria-label="Wave"><option value="sine" selected>Sine</option><option value="triangle">Triangle</option><option value="saw">Saw</option><option value="square">Square</option><option value="hold">Sample &amp; Hold</option></select><span>Wave</span></div>
       <div class="ctl"><i class="k" style="--a:22deg"></i><span>Rate</span></div>
       <div class="ctl" title="Match the host tempo"><i class="t"></i><span>Tempo</span></div>
       <div class="ctl"><i class="k" style="--a:-100deg"></i><span>Phase</span></div>
       <div class="ctl"><i class="t"></i><span>Retrigger</span></div>
       <div class="ctl"><i class="k" style="--a:34deg"></i><span>Amount</span></div>
-      <div class="ctl"><i class="k" style="--a:-90deg"></i><span>Target</span></div>
-      <div class="ctl"><i class="k" style="--a:-20deg"></i><span>Chain</span></div>
+      <div class="ctl menu"><select class="pick" aria-label="Target"><option value="off" selected>Off</option><option value="pitch">Pitch</option><option value="volume">Volume</option><option value="pan">Pan</option><option value="cutoff">Cutoff</option><option value="resonance">Resonance</option><option value="amp">Amp</option></select><span>Target</span></div>
+      <div class="ctl menu short"><select class="pick" aria-label="Chain"><option value="all" selected>All</option><option>A</option><option>B</option><option>C</option><option>D</option></select><span>Chain</span></div>
     </div>
   </section>
   <section class="panel lfo">
     <h2>LFO D</h2>
+    <svg class="plot lfo-plot" viewBox="0 0 160 64" aria-hidden="true"><path d=""/></svg>
     <div class="rcells">
-      <div class="ctl"><i class="k" style="--a:-40deg"></i><span>Wave</span></div>
+      <div class="ctl menu wide"><select class="pick" data-kind="lfo-wave" aria-label="Wave"><option value="sine" selected>Sine</option><option value="triangle">Triangle</option><option value="saw">Saw</option><option value="square">Square</option><option value="hold">Sample &amp; Hold</option></select><span>Wave</span></div>
       <div class="ctl"><i class="k" style="--a:22deg"></i><span>Rate</span></div>
       <div class="ctl" title="Match the host tempo"><i class="t"></i><span>Tempo</span></div>
       <div class="ctl"><i class="k" style="--a:-100deg"></i><span>Phase</span></div>
       <div class="ctl"><i class="t"></i><span>Retrigger</span></div>
       <div class="ctl"><i class="k" style="--a:34deg"></i><span>Amount</span></div>
-      <div class="ctl"><i class="k" style="--a:-90deg"></i><span>Target</span></div>
-      <div class="ctl"><i class="k" style="--a:-20deg"></i><span>Chain</span></div>
+      <div class="ctl menu"><select class="pick" aria-label="Target"><option value="off" selected>Off</option><option value="pitch">Pitch</option><option value="volume">Volume</option><option value="pan">Pan</option><option value="cutoff">Cutoff</option><option value="resonance">Resonance</option><option value="amp">Amp</option></select><span>Target</span></div>
+      <div class="ctl menu short"><select class="pick" aria-label="Chain"><option value="all" selected>All</option><option>A</option><option>B</option><option>C</option><option>D</option></select><span>Chain</span></div>
     </div>
   </section>
 
@@ -1099,9 +1266,10 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
     vw = innerWidth;
     vh = innerHeight;
     art = synth.getBoundingClientRect();
-    boxes = lit.map((el) => {
+    boxes = lit.flatMap((el) => {
+      if (el !== synth && el.offsetParent === null) return [];
       const r = el.getBoundingClientRect();
-      return { el, r, cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
+      return [{ el, r, cx: r.left + r.width / 2, cy: r.top + r.height / 2 }];
     });
     occDirty = true;
   };
@@ -1162,6 +1330,111 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
       if (still) paint(0);
     });
   };
+
+  /* Pictures follow the choices. Filter shape is a 2-pole response: Cutoff slides
+     on a log scale, Resonance raises Q from 0.707 to 8. Drag a live knob up or down. */
+  const wavePath = (kind) => {
+    const n = 96, mid = 32, amp = 22;
+    let d = "", prev = null;
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      let y = 0;
+      if (kind === "triangle") {
+        const p = (t * 2) % 1;
+        y = p < 0.5 ? p * 4 - 1 : 3 - p * 4;
+      } else if (kind === "saw") y = ((t * 2) % 1) * 2 - 1;
+      else if (kind === "pulse" || kind === "square") y = (t * 2) % 1 < 0.5 ? 1 : -1;
+      else if (kind === "hold") y = [0.25, 0.85, -0.45, 0.55, -0.9, 0.15, -0.25, 0.7][Math.min(7, Math.floor(t * 8))];
+      else y = Math.sin(t * Math.PI * 4);
+      const x = t * 160;
+      const py = mid - y * amp;
+      const jump = prev !== null && Math.abs(y - prev) > 1.2;
+      d += (i === 0 || jump ? "M" : "L") + x.toFixed(1) + " " + py.toFixed(1) + " ";
+      prev = y;
+    }
+    return d;
+  };
+  const knobUnit = (knob) => {
+    const angle = parseFloat(getComputedStyle(knob).getPropertyValue("--a"));
+    return Math.min(1, Math.max(0, (angle + 135) / 270));
+  };
+  const responsePath = (type, cutoff, resonance) => {
+    const q = 0.707 + resonance * resonance * (8 - 0.707);
+    let d = "";
+    for (let i = 0; i <= 80; i++) {
+      const x = i / 80;
+      const w = Math.pow(10, (x - cutoff) * 3);
+      const w2 = w * w;
+      const den = Math.sqrt((1 - w2) * (1 - w2) + (w / q) * (w / q));
+      let h = 1 / den;
+      if (type === "highpass") h = w2 / den;
+      else if (type === "bandpass") h = (w / q) / den;
+      else if (type === "notch") h = Math.abs(1 - w2) / den;
+      const db = Math.max(-30, Math.min(18, 20 * Math.log10(h + 1e-8)));
+      const y = Math.min(45, Math.max(3, 20 - db * (16 / 18)));
+      d += (i ? "L" : "M") + (4 + x * 152).toFixed(1) + " " + y.toFixed(1) + " ";
+    }
+    return d;
+  };
+  const paintFilter = (panel) => {
+    const type = panel.querySelector("[data-kind=filter]").value;
+    const unit = (name) => knobUnit([...panel.querySelectorAll(".ctl")].find((el) => el.querySelector(":scope > span")?.textContent === name).querySelector(".k"));
+    panel.querySelector(".response .curve").setAttribute("d", responsePath(type, unit("Cutoff"), unit("Resonance")));
+  };
+  const paintAll = () => {
+    document.querySelectorAll(".chain").forEach((chain) => {
+      const path = chain.querySelector(".wave path");
+      const kind = chain.querySelector("[data-kind=osc-wave]");
+      if (path && kind) path.setAttribute("d", wavePath(kind.value));
+    });
+    document.querySelectorAll("[data-kind=filter]").forEach((sel) => paintFilter(sel.closest(".panel")));
+    document.querySelectorAll("[data-kind=lfo-wave]").forEach((sel) => {
+      const path = sel.closest(".panel").querySelector(".lfo-plot path");
+      if (path) path.setAttribute("d", wavePath(sel.value));
+    });
+  };
+  synth.addEventListener("change", (e) => {
+    const sel = e.target.closest("select");
+    if (!sel) return;
+    if (sel.dataset.kind === "osc-wave") {
+      const path = sel.closest(".chain").querySelector(".wave path");
+      if (path) path.setAttribute("d", wavePath(sel.value));
+    } else if (sel.dataset.kind === "lfo-wave") {
+      const path = sel.closest(".panel").querySelector(".lfo-plot path");
+      if (path) path.setAttribute("d", wavePath(sel.value));
+    } else if (sel.dataset.kind === "filter") paintFilter(sel.closest(".panel"));
+  });
+  synth.querySelectorAll(".k.live").forEach((knob) => {
+    knob.addEventListener("pointerdown", (e) => {
+      knob.setPointerCapture(e.pointerId);
+      const startY = e.clientY;
+      const start = parseFloat(getComputedStyle(knob).getPropertyValue("--a"));
+      const move = (ev) => {
+        const angle = Math.min(135, Math.max(-135, start + (startY - ev.clientY) * 1.5));
+        knob.style.setProperty("--a", angle.toFixed(1) + "deg");
+        paintFilter(knob.closest(".panel"));
+      };
+      const up = () => {
+        knob.removeEventListener("pointermove", move);
+        knob.removeEventListener("pointerup", up);
+      };
+      knob.addEventListener("pointermove", move);
+      knob.addEventListener("pointerup", up);
+    });
+  });
+  paintAll();
+
+  document.querySelector(".tabs").addEventListener("click", (e) => {
+    const button = e.target.closest("button");
+    if (!button) return;
+    synth.dataset.tab = button.dataset.tab;
+    for (const tab of button.parentElement.children) {
+      const on = tab === button;
+      tab.classList.toggle("on", on);
+      tab.setAttribute("aria-pressed", on ? "true" : "false");
+    }
+    relayout();
+  });
 
   measure();
   if (sky) sky.resize();

@@ -10,6 +10,7 @@ use crate::envelope::{bind_amp_sync, AmpParams, AmpSyncHub};
 use crate::filter::{bind_filter_sync, FilterParams, FilterSyncHub};
 use crate::filter_env::{bind_filter_env_sync, FilterEnvParams, FilterEnvSyncHub};
 use crate::master::MasterParams;
+use crate::mod_env::{bind_mod_env_sync, ModEnvParams, ModEnvSyncHub};
 use crate::oscillator::OscParams;
 
 #[derive(Params)]
@@ -46,6 +47,14 @@ pub struct MoteParams {
     pub amp3: AmpParams,
     #[nested(id_prefix = "a4", group = "D Amp Env")]
     pub amp4: AmpParams,
+    #[nested(id_prefix = "me1", group = "A Mod Env")]
+    pub mod_env1: ModEnvParams,
+    #[nested(id_prefix = "me2", group = "B Mod Env")]
+    pub mod_env2: ModEnvParams,
+    #[nested(id_prefix = "me3", group = "C Mod Env")]
+    pub mod_env3: ModEnvParams,
+    #[nested(id_prefix = "me4", group = "D Mod Env")]
+    pub mod_env4: ModEnvParams,
     #[nested(id_prefix = "master", group = "Master")]
     pub master: MasterParams,
 }
@@ -56,6 +65,7 @@ impl Default for MoteParams {
         let amp_hub = Arc::new(AmpSyncHub::new());
         let filter_hub = Arc::new(FilterSyncHub::new());
         let filter_env_hub = Arc::new(FilterEnvSyncHub::new());
+        let mod_env_hub = Arc::new(ModEnvSyncHub::new());
         Self {
             osc1: OscParams::new('A', true),
             osc2: OscParams::new('B', false),
@@ -73,6 +83,10 @@ impl Default for MoteParams {
             amp2: AmpParams::new('B', 1, amp_hub.clone()),
             amp3: AmpParams::new('C', 2, amp_hub.clone()),
             amp4: AmpParams::new('D', 3, amp_hub),
+            mod_env1: ModEnvParams::new('A', 0, mod_env_hub.clone()),
+            mod_env2: ModEnvParams::new('B', 1, mod_env_hub.clone()),
+            mod_env3: ModEnvParams::new('C', 2, mod_env_hub.clone()),
+            mod_env4: ModEnvParams::new('D', 3, mod_env_hub),
             master: MasterParams::new(),
         }
     }
@@ -97,6 +111,15 @@ impl MoteParams {
         ]
     }
 
+    pub fn mod_envelopes(&self) -> [&ModEnvParams; 4] {
+        [
+            &self.mod_env1,
+            &self.mod_env2,
+            &self.mod_env3,
+            &self.mod_env4,
+        ]
+    }
+
     pub fn amp_envelopes(&self) -> [&AmpParams; 4] {
         [&self.amp1, &self.amp2, &self.amp3, &self.amp4]
     }
@@ -112,5 +135,9 @@ impl MoteParams {
 
     pub fn bind_filter_env_sync(&self) {
         bind_filter_env_sync(self.filter_envelopes());
+    }
+
+    pub fn bind_mod_env_sync(&self) {
+        bind_mod_env_sync(self.mod_envelopes());
     }
 }

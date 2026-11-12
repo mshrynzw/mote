@@ -14,6 +14,7 @@ mod envelope;
 mod filter;
 mod filter_env;
 mod master;
+mod mod_env;
 mod oscillator;
 mod params;
 mod unison;
@@ -43,6 +44,7 @@ impl Default for Mote {
         params.bind_amp_sync();
         params.bind_filter_sync();
         params.bind_filter_env_sync();
+        params.bind_mod_env_sync();
         Self {
             params,
             voices: Voices::new(),
@@ -170,6 +172,7 @@ impl Plugin for Mote {
                 &self.params.oscillators(),
                 &self.params.filters(),
                 &self.params.filter_envelopes(),
+                &self.params.mod_envelopes(),
                 &self.params.amp_envelopes(),
                 &self.params.master,
             );

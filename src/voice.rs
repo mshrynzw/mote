@@ -8,17 +8,28 @@ use crate::envelope::{synced_amp, AmpEnvelope, AmpParams};
 use crate::filter::{synced_filter, Filter, FilterParams};
 use crate::filter_env::{synced_filter_env, FilterEnv, FilterEnvParams};
 use crate::master::{bend_semitones, note_limit, MasterParams, PlayMode};
+use crate::mod_env::{scaled_amount, synced_mod_env, ModEnv, ModEnvParams};
 use crate::oscillator::{OscParams, Oscillator};
 use crate::wavetable::WaveBank;
 use nice_plug::prelude::*;
 
 use crate::master::MAX_NOTES;
 
+/// 1 サンプルで読むノブ。`&` はコピーせず、借りる印。
+pub(crate) struct ChainParams<'a> {
+    oscs: &'a [&'a OscParams; 4],
+    filters: &'a [&'a FilterParams; 4],
+    filter_envs: &'a [&'a FilterEnvParams; 4],
+    mod_envs: &'a [&'a ModEnvParams; 4],
+    amps: &'a [&'a AmpParams; 4],
+}
+
 /// 1 つの MIDI ノート。オシレーター 4 基分の状態を、起動時に持っておく。
 pub struct NoteVoice {
     oscillators: [Oscillator; 4],
     filters: [Filter; 4],
     filter_envs: [FilterEnv; 4],
+    mod_envs: [ModEnv; 4],
     amps: [AmpEnvelope; 4],
     sample_rate: f32,
     /// このスロットのキー。Release が終わると `None`。
@@ -40,6 +51,7 @@ impl NoteVoice {
             oscillators: std::array::from_fn(|_| Oscillator::new()),
             filters: std::array::from_fn(|_| Filter::new()),
             filter_envs: std::array::from_fn(|_| FilterEnv::new()),
+            mod_envs: std::array::from_fn(|_| ModEnv::new()),
             amps: std::array::from_fn(|_| AmpEnvelope::new()),
             sample_rate: 48_000.0,
             key: None,
@@ -66,6 +78,9 @@ impl NoteVoice {
         }
         for filter_env in &mut self.filter_envs {
             filter_env.reset();
+        }
+        for mod_env in &mut self.mod_envs {
+            mod_env.reset();
         }
         for amp in &mut self.amps {
             amp.reset();
@@ -118,6 +133,11 @@ impl NoteVoice {
                 self.amps[index].reset();
             }
         }
+        if start_envelopes {
+            for mod_env in &mut self.mod_envs {
+                mod_env.start();
+            }
+        }
     }
 
     fn begin_glide(&mut self, target: f32, seconds: f32, fingered: bool) {
@@ -154,6 +174,9 @@ impl NoteVoice {
             return;
         }
         self.held = false;
+        for mod_env in &mut self.mod_envs {
+            mod_env.release();
+        }
         for filter_env in &mut self.filter_envs {
             filter_env.release();
         }
@@ -163,12 +186,9 @@ impl NoteVoice {
     }
 
     /// 左右 1 サンプル。`pitch_semitones` は Transpose とベンドの合計。
-    pub fn next_sample(
+    pub(crate) fn next_sample(
         &mut self,
-        oscs: &[&OscParams; 4],
-        filters: &[&FilterParams; 4],
-        filter_envs: &[&FilterEnvParams; 4],
-        amps: &[&AmpParams; 4],
+        chain: &ChainParams<'_>,
         pitch_semitones: f32,
         bank: &WaveBank,
     ) -> (f32, f32) {
@@ -176,10 +196,16 @@ impl NoteVoice {
             return (0.0, 0.0);
         }
         let sounding = self.glide_note + pitch_semitones;
+        // 割り当て前なので、高さは計算だけして音には足さない。
+        for index in 0..4 {
+            let params = synced_mod_env(index, chain.mod_envs);
+            let level = self.mod_envs[index].next(params, self.sample_rate);
+            let _ = scaled_amount(level, params.amount.value());
+        }
         let mut left = 0.0;
         let mut right = 0.0;
         let mut active = 0u32;
-        for (index, osc_params) in oscs.iter().enumerate() {
+        for (index, osc_params) in chain.oscs.iter().enumerate() {
             if !osc_params.on.value() {
                 self.filters[index].silence();
                 self.filter_envs[index].silence();
@@ -193,17 +219,18 @@ impl NoteVoice {
                 Some(sounding),
                 self.sample_rate,
             );
-            let env_params = synced_filter_env(index, filter_envs);
+            let env_params = synced_filter_env(index, chain.filter_envs);
             let env_octaves = self.filter_envs[index].next_octaves(env_params, self.sample_rate);
             let (filtered_left, filtered_right) = self.filters[index].next_sample(
-                synced_filter(index, filters),
+                synced_filter(index, chain.filters),
                 osc_left,
                 osc_right,
                 Some(sounding),
                 self.sample_rate,
                 env_octaves,
             );
-            let env = self.amps[index].next(synced_amp(index, amps).settings(), self.sample_rate);
+            let env =
+                self.amps[index].next(synced_amp(index, chain.amps).settings(), self.sample_rate);
             left += filtered_left * env;
             right += filtered_right * env;
         }
@@ -437,9 +464,17 @@ impl Voices {
         oscs: &[&OscParams; 4],
         filters: &[&FilterParams; 4],
         filter_envs: &[&FilterEnvParams; 4],
+        mod_envs: &[&ModEnvParams; 4],
         amps: &[&AmpParams; 4],
         master: &MasterParams,
     ) -> (f32, f32) {
+        let chain = ChainParams {
+            oscs,
+            filters,
+            filter_envs,
+            mod_envs,
+            amps,
+        };
         self.apply_mode(master);
         self.trim_polyphony(note_limit(master.mode.value(), master.polyphony.value()));
         let transpose_target = master.transpose.value() as f32;
@@ -457,8 +492,7 @@ impl Voices {
         let mut left = 0.0;
         let mut right = 0.0;
         for slot in &mut self.slots {
-            let (slot_left, slot_right) =
-                slot.next_sample(oscs, filters, filter_envs, amps, pitch, &self.bank);
+            let (slot_left, slot_right) = slot.next_sample(&chain, pitch, &self.bank);
             left += slot_left;
             right += slot_right;
         }
@@ -596,6 +630,7 @@ mod tests {
             &knobs.oscillators(),
             &knobs.filters(),
             &knobs.filter_envelopes(),
+            &knobs.mod_envelopes(),
             &knobs.amp_envelopes(),
             &knobs.master,
         )

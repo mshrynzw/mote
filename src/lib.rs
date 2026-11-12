@@ -13,6 +13,7 @@ use std::sync::Arc;
 mod envelope;
 mod filter;
 mod filter_env;
+mod lfo;
 mod master;
 mod mod_env;
 mod oscillator;
@@ -45,6 +46,7 @@ impl Default for Mote {
         params.bind_filter_sync();
         params.bind_filter_env_sync();
         params.bind_mod_env_sync();
+        params.bind_lfo_sync();
         Self {
             params,
             voices: Voices::new(),
@@ -67,6 +69,7 @@ impl Mote {
                         note,
                         velocity,
                         &self.params.oscillators(),
+                        &self.params.lfos(),
                         &self.params.master,
                     );
                 }
@@ -78,6 +81,7 @@ impl Mote {
                     key.number(),
                     &self.params.master,
                     &self.params.oscillators(),
+                    &self.params.lfos(),
                 );
             }
             // `value` の 0.5 が中央。上下は Bend Range の半音数まで。
@@ -154,6 +158,9 @@ impl Plugin for Mote {
     ) -> ProcessStatus {
         // このバッファ内の、次に処理する MIDI。まだ無ければ None。
         let mut next_event = context.next_event();
+        let transport = context.transport();
+        self.voices
+            .set_transport(transport.tempo, transport.time_sig_numerator);
 
         // `iter_samples` は「サンプル時刻ごとに、全チャンネル」を順に渡す。
         // `sample_id` はバッファ先頭からの番号。0 が最初のサンプル。
@@ -168,14 +175,21 @@ impl Plugin for Mote {
                 next_event = context.next_event();
             }
 
-            let (left, right) = self.voices.next_sample(
-                &self.params.oscillators(),
-                &self.params.filters(),
-                &self.params.filter_envelopes(),
-                &self.params.mod_envelopes(),
-                &self.params.amp_envelopes(),
-                &self.params.master,
-            );
+            let oscs = self.params.oscillators();
+            let filters = self.params.filters();
+            let filter_envs = self.params.filter_envelopes();
+            let mod_envs = self.params.mod_envelopes();
+            let lfos = self.params.lfos();
+            let amps = self.params.amp_envelopes();
+            let chain = voice::ChainParams {
+                oscs: &oscs,
+                filters: &filters,
+                filter_envs: &filter_envs,
+                mod_envs: &mod_envs,
+                lfos: &lfos,
+                amps: &amps,
+            };
+            let (left, right) = self.voices.next_sample(&chain, &self.params.master);
             // 左右で値が違う。`enumerate` の 0 が左、1 が右。
             for (channel, channel_sample) in channel_samples.into_iter().enumerate() {
                 *channel_sample = if channel == 0 { left } else { right };

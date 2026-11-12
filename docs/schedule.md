@@ -11,7 +11,7 @@
 | Phase 2 Filter Env | 3 |  |  | 2026-11-12 | 2026-11-12 |
 | Phase 2 Master | 2 |  |  | 2026-11-12 | 2026-11-12 |
 | Phase 2 Mod Env | 3 |  |  | 2026-11-12 | 2026-11-12 |
-| Phase 2 LFO | 2 |  |  |  |  |
+| Phase 2 LFO | 2 |  |  | 2026-11-12 | 2026-11-12 |
 | Phase 2 Mod Env と LFO の割り当て | 4 |  |  |  |  |
 | Phase 3 HTML/CSS の Main | 2 |  |  |  |  |
 | Phase 3 HTML/CSS の Preset | 1 |  |  |  |  |

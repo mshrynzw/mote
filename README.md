@@ -7,7 +7,7 @@ Windows 11 向けのウェーブテーブル・シンセサイザーです。DAW
 
 ## いまの段階
 
-Phase 2 の途中です。オシレーターは 4 基で、Classic（サイン、三角、ノコギリ、パルス）と Unison が鳴ります。初期状態でオンなのは 1 基目だけです。Polyphony の初期値は 4 で、Mode の初期値は Poly です。Amp Env と Filter Env が鳴り、各オシレーターは自分のフィルターを通る。Master では音量、移調、ベンド、Mono、Legato、Portamento を扱います。Mod Env のノブはある。行き先はまだ割り当てていないので、音は変わらない。LFO、Stacked Saw、Wavetable、独自の画面はまだない。
+Phase 2 の途中です。オシレーターは 4 基で、Classic（サイン、三角、ノコギリ、パルス）と Unison が鳴ります。初期状態でオンなのは 1 基目だけです。Polyphony の初期値は 4 で、Mode の初期値は Poly です。Amp Env と Filter Env が鳴り、各オシレーターは自分のフィルターを通る。Master では音量、移調、ベンド、Mono、Legato、Portamento を扱います。Mod Env と LFO のノブはある。行き先はまだ割り当てていないので、音は変わらない。Stacked Saw、Wavetable、独自の画面はまだない。
 
 ## ビルド
 

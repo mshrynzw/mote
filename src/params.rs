@@ -9,6 +9,7 @@ use std::sync::Arc;
 use crate::envelope::{bind_amp_sync, AmpParams, AmpSyncHub};
 use crate::filter::{bind_filter_sync, FilterParams, FilterSyncHub};
 use crate::filter_env::{bind_filter_env_sync, FilterEnvParams, FilterEnvSyncHub};
+use crate::lfo::{bind_lfo_sync, LfoParams, LfoSyncHub};
 use crate::master::MasterParams;
 use crate::mod_env::{bind_mod_env_sync, ModEnvParams, ModEnvSyncHub};
 use crate::oscillator::OscParams;
@@ -55,6 +56,14 @@ pub struct MoteParams {
     pub mod_env3: ModEnvParams,
     #[nested(id_prefix = "me4", group = "D Mod Env")]
     pub mod_env4: ModEnvParams,
+    #[nested(id_prefix = "l1", group = "A LFO")]
+    pub lfo1: LfoParams,
+    #[nested(id_prefix = "l2", group = "B LFO")]
+    pub lfo2: LfoParams,
+    #[nested(id_prefix = "l3", group = "C LFO")]
+    pub lfo3: LfoParams,
+    #[nested(id_prefix = "l4", group = "D LFO")]
+    pub lfo4: LfoParams,
     #[nested(id_prefix = "master", group = "Master")]
     pub master: MasterParams,
 }
@@ -66,6 +75,7 @@ impl Default for MoteParams {
         let filter_hub = Arc::new(FilterSyncHub::new());
         let filter_env_hub = Arc::new(FilterEnvSyncHub::new());
         let mod_env_hub = Arc::new(ModEnvSyncHub::new());
+        let lfo_hub = Arc::new(LfoSyncHub::new());
         Self {
             osc1: OscParams::new('A', true),
             osc2: OscParams::new('B', false),
@@ -87,6 +97,10 @@ impl Default for MoteParams {
             mod_env2: ModEnvParams::new('B', 1, mod_env_hub.clone()),
             mod_env3: ModEnvParams::new('C', 2, mod_env_hub.clone()),
             mod_env4: ModEnvParams::new('D', 3, mod_env_hub),
+            lfo1: LfoParams::new('A', 0, lfo_hub.clone()),
+            lfo2: LfoParams::new('B', 1, lfo_hub.clone()),
+            lfo3: LfoParams::new('C', 2, lfo_hub.clone()),
+            lfo4: LfoParams::new('D', 3, lfo_hub),
             master: MasterParams::new(),
         }
     }
@@ -109,6 +123,10 @@ impl MoteParams {
             &self.filter_env3,
             &self.filter_env4,
         ]
+    }
+
+    pub fn lfos(&self) -> [&LfoParams; 4] {
+        [&self.lfo1, &self.lfo2, &self.lfo3, &self.lfo4]
     }
 
     pub fn mod_envelopes(&self) -> [&ModEnvParams; 4] {
@@ -139,5 +157,9 @@ impl MoteParams {
 
     pub fn bind_mod_env_sync(&self) {
         bind_mod_env_sync(self.mod_envelopes());
+    }
+
+    pub fn bind_lfo_sync(&self) {
+        bind_lfo_sync(self.lfos());
     }
 }

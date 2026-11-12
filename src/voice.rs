@@ -7,6 +7,7 @@
 use crate::envelope::{synced_amp, AmpEnvelope, AmpParams};
 use crate::filter::{synced_filter, Filter, FilterParams};
 use crate::filter_env::{synced_filter_env, FilterEnv, FilterEnvParams};
+use crate::lfo::{apply_amount, lfo_hz, synced_lfo, LfoParams, LfoPhase};
 use crate::master::{bend_semitones, note_limit, MasterParams, PlayMode};
 use crate::mod_env::{scaled_amount, synced_mod_env, ModEnv, ModEnvParams};
 use crate::oscillator::{OscParams, Oscillator};
@@ -17,11 +18,12 @@ use crate::master::MAX_NOTES;
 
 /// 1 サンプルで読むノブ。`&` はコピーせず、借りる印。
 pub(crate) struct ChainParams<'a> {
-    oscs: &'a [&'a OscParams; 4],
-    filters: &'a [&'a FilterParams; 4],
-    filter_envs: &'a [&'a FilterEnvParams; 4],
-    mod_envs: &'a [&'a ModEnvParams; 4],
-    amps: &'a [&'a AmpParams; 4],
+    pub(crate) oscs: &'a [&'a OscParams; 4],
+    pub(crate) filters: &'a [&'a FilterParams; 4],
+    pub(crate) filter_envs: &'a [&'a FilterEnvParams; 4],
+    pub(crate) mod_envs: &'a [&'a ModEnvParams; 4],
+    pub(crate) lfos: &'a [&'a LfoParams; 4],
+    pub(crate) amps: &'a [&'a AmpParams; 4],
 }
 
 /// 1 つの MIDI ノート。オシレーター 4 基分の状態を、起動時に持っておく。
@@ -30,7 +32,10 @@ pub struct NoteVoice {
     filters: [Filter; 4],
     filter_envs: [FilterEnv; 4],
     mod_envs: [ModEnv; 4],
+    lfo_phases: [LfoPhase; 4],
     amps: [AmpEnvelope; 4],
+    bpm: f32,
+    beats_per_bar: f32,
     sample_rate: f32,
     /// このスロットのキー。Release が終わると `None`。
     key: Option<u8>,
@@ -52,7 +57,10 @@ impl NoteVoice {
             filters: std::array::from_fn(|_| Filter::new()),
             filter_envs: std::array::from_fn(|_| FilterEnv::new()),
             mod_envs: std::array::from_fn(|_| ModEnv::new()),
+            lfo_phases: std::array::from_fn(|index| LfoPhase::new((index as u32) + 1)),
             amps: std::array::from_fn(|_| AmpEnvelope::new()),
+            bpm: 120.0,
+            beats_per_bar: 4.0,
             sample_rate: 48_000.0,
             key: None,
             held: false,
@@ -82,6 +90,9 @@ impl NoteVoice {
         for mod_env in &mut self.mod_envs {
             mod_env.reset();
         }
+        for (index, phase) in self.lfo_phases.iter_mut().enumerate() {
+            phase.reset((index as u32) + 1);
+        }
         for amp in &mut self.amps {
             amp.reset();
         }
@@ -105,6 +116,7 @@ impl NoteVoice {
     }
 
     /// `from` が `Some` のときだけ、その音程から Portamento の時間で移る。
+    #[allow(clippy::too_many_arguments)]
     fn assign(
         &mut self,
         key: u8,
@@ -113,6 +125,7 @@ impl NoteVoice {
         from: Option<f32>,
         portamento_seconds: f32,
         params: &[&OscParams; 4],
+        lfos: &[&LfoParams; 4],
     ) {
         self.key = Some(key);
         self.held = true;
@@ -136,6 +149,12 @@ impl NoteVoice {
         if start_envelopes {
             for mod_env in &mut self.mod_envs {
                 mod_env.start();
+            }
+        }
+        for index in 0..4 {
+            let lfo = synced_lfo(index, lfos);
+            if lfo.retrigger.value() {
+                self.lfo_phases[index].retrigger(lfo.phase.value());
             }
         }
     }
@@ -189,6 +208,7 @@ impl NoteVoice {
     pub(crate) fn next_sample(
         &mut self,
         chain: &ChainParams<'_>,
+        free_wave: &[f32; 4],
         pitch_semitones: f32,
         bank: &WaveBank,
     ) -> (f32, f32) {
@@ -197,10 +217,26 @@ impl NoteVoice {
         }
         let sounding = self.glide_note + pitch_semitones;
         // 割り当て前なので、高さは計算だけして音には足さない。
-        for index in 0..4 {
+        for (index, mod_env) in self.mod_envs.iter_mut().enumerate() {
             let params = synced_mod_env(index, chain.mod_envs);
-            let level = self.mod_envs[index].next(params, self.sample_rate);
+            let level = mod_env.next(params, self.sample_rate);
             let _ = scaled_amount(level, params.amount.value());
+        }
+        for (index, phase) in self.lfo_phases.iter_mut().enumerate() {
+            let lfo = synced_lfo(index, chain.lfos);
+            let hz = lfo_hz(
+                lfo.rate.value(),
+                lfo.tempo.value(),
+                self.bpm,
+                self.beats_per_bar,
+            );
+            let wave = if lfo.retrigger.value() {
+                phase.advance(hz, self.sample_rate, lfo.wave.value(), lfo.phase.value())
+            } else {
+                free_wave[index]
+            };
+            // 割り当て前なので、波は計算だけして音には足さない。
+            let _ = apply_amount(wave, lfo.amount.value());
         }
         let mut left = 0.0;
         let mut right = 0.0;
@@ -323,6 +359,10 @@ pub struct Voices {
     sample_rate: f32,
     next_age: u64,
     bend: f32,
+    free_lfos: [LfoPhase; 4],
+    free_wave: [f32; 4],
+    bpm: f32,
+    beats_per_bar: f32,
     last_mode: PlayMode,
     volume: Smoother<f32>,
     last_volume: f32,
@@ -343,6 +383,10 @@ impl Voices {
             sample_rate: 48_000.0,
             next_age: 1,
             bend: 0.5,
+            free_lfos: std::array::from_fn(|index| LfoPhase::new(100 + index as u32)),
+            free_wave: [0.0; 4],
+            bpm: 120.0,
+            beats_per_bar: 4.0,
             last_mode: PlayMode::Poly,
             volume,
             last_volume: 0.0,
@@ -366,11 +410,27 @@ impl Voices {
         self.stack.clear();
         self.next_age = 1;
         self.bend = 0.5;
+        for (index, phase) in self.free_lfos.iter_mut().enumerate() {
+            phase.reset(100 + index as u32);
+        }
+        self.free_wave = [0.0; 4];
         self.last_mode = PlayMode::Poly;
         self.volume.reset(0.0);
         self.last_volume = 0.0;
         self.transpose.reset(0.0);
         self.last_transpose = 0.0;
+    }
+
+    /// DAW のテンポ。`None` や 0 以下は 120 BPM、拍子が無いときは 4 拍子。
+    pub fn set_transport(&mut self, tempo: Option<f64>, numerator: Option<i32>) {
+        self.bpm = match tempo {
+            Some(bpm) if bpm.is_finite() && bpm > 0.0 => bpm as f32,
+            _ => 120.0,
+        };
+        self.beats_per_bar = match numerator {
+            Some(beats) if beats > 0 => beats as f32,
+            _ => 4.0,
+        };
     }
 
     pub fn set_bend(&mut self, value: f32) {
@@ -386,10 +446,11 @@ impl Voices {
         key: u8,
         velocity: f32,
         oscs: &[&OscParams; 4],
+        lfos: &[&LfoParams; 4],
         master: &MasterParams,
     ) {
         if velocity <= 0.0 {
-            self.note_off(Some(key), master, oscs);
+            self.note_off(Some(key), master, oscs, lfos);
             return;
         }
         let mode = master.mode.value();
@@ -404,7 +465,7 @@ impl Voices {
             PlayMode::Poly => {
                 let index = self.slot_for(key, limit);
                 let from = if fingered { previous } else { None };
-                self.slots[index].assign(key, age, true, from, portamento, oscs);
+                self.slots[index].assign(key, age, true, from, portamento, oscs, lfos);
             }
             PlayMode::Mono => {
                 self.stack.push(key);
@@ -415,13 +476,19 @@ impl Voices {
                 } else {
                     None
                 };
-                self.slots[index].assign(key, age, start_envelopes, from, portamento, oscs);
+                self.slots[index].assign(key, age, start_envelopes, from, portamento, oscs, lfos);
                 self.release_except(index);
             }
         }
     }
 
-    pub fn note_off(&mut self, key: Option<u8>, master: &MasterParams, oscs: &[&OscParams; 4]) {
+    pub fn note_off(
+        &mut self,
+        key: Option<u8>,
+        master: &MasterParams,
+        oscs: &[&OscParams; 4],
+        lfos: &[&LfoParams; 4],
+    ) {
         let Some(key) = key else {
             self.stack.clear();
             for slot in &mut self.slots {
@@ -446,6 +513,7 @@ impl Voices {
                         from,
                         master.portamento.value().max(0.0),
                         oscs,
+                        lfos,
                     );
                 }
             } else if let Some(index) = self.held_index(key) {
@@ -459,22 +527,22 @@ impl Voices {
     }
 
     /// 左右 1 サンプル。Master Volume は、鳴っているノートを足したあとで掛ける。
-    pub fn next_sample(
-        &mut self,
-        oscs: &[&OscParams; 4],
-        filters: &[&FilterParams; 4],
-        filter_envs: &[&FilterEnvParams; 4],
-        mod_envs: &[&ModEnvParams; 4],
-        amps: &[&AmpParams; 4],
-        master: &MasterParams,
-    ) -> (f32, f32) {
-        let chain = ChainParams {
-            oscs,
-            filters,
-            filter_envs,
-            mod_envs,
-            amps,
-        };
+    pub fn next_sample(&mut self, chain: &ChainParams<'_>, master: &MasterParams) -> (f32, f32) {
+        for index in 0..4 {
+            let lfo = synced_lfo(index, chain.lfos);
+            let hz = lfo_hz(
+                lfo.rate.value(),
+                lfo.tempo.value(),
+                self.bpm,
+                self.beats_per_bar,
+            );
+            self.free_wave[index] = self.free_lfos[index].advance(
+                hz,
+                self.sample_rate,
+                lfo.wave.value(),
+                lfo.phase.value(),
+            );
+        }
         self.apply_mode(master);
         self.trim_polyphony(note_limit(master.mode.value(), master.polyphony.value()));
         let transpose_target = master.transpose.value() as f32;
@@ -492,7 +560,10 @@ impl Voices {
         let mut left = 0.0;
         let mut right = 0.0;
         for slot in &mut self.slots {
-            let (slot_left, slot_right) = slot.next_sample(&chain, pitch, &self.bank);
+            slot.bpm = self.bpm;
+            slot.beats_per_bar = self.beats_per_bar;
+            let (slot_left, slot_right) =
+                slot.next_sample(chain, &self.free_wave, pitch, &self.bank);
             left += slot_left;
             right += slot_right;
         }
@@ -626,14 +697,21 @@ mod tests {
     }
 
     fn render(voices: &mut Voices, knobs: &MoteParams) -> (f32, f32) {
-        voices.next_sample(
-            &knobs.oscillators(),
-            &knobs.filters(),
-            &knobs.filter_envelopes(),
-            &knobs.mod_envelopes(),
-            &knobs.amp_envelopes(),
-            &knobs.master,
-        )
+        let oscs = knobs.oscillators();
+        let filters = knobs.filters();
+        let filter_envs = knobs.filter_envelopes();
+        let mod_envs = knobs.mod_envelopes();
+        let lfos = knobs.lfos();
+        let amps = knobs.amp_envelopes();
+        let chain = ChainParams {
+            oscs: &oscs,
+            filters: &filters,
+            filter_envs: &filter_envs,
+            mod_envs: &mod_envs,
+            lfos: &lfos,
+            amps: &amps,
+        };
+        voices.next_sample(&chain, &knobs.master)
     }
 
     fn set_mode(param: &nice_plug::prelude::EnumParam<PlayMode>, mode: PlayMode) {
@@ -666,7 +744,7 @@ mod tests {
         voices.set_sample_rate(48_000.0);
         let knobs = params();
         let oscs = knobs.oscillators();
-        voices.note_on(69, 1.0, &oscs, &knobs.master);
+        voices.note_on(69, 1.0, &oscs, &knobs.lfos(), &knobs.master);
 
         let mut heard = false;
         for _ in 0..32 {
@@ -677,7 +755,7 @@ mod tests {
         }
         assert!(heard);
 
-        voices.note_off(Some(69), &knobs.master, &oscs);
+        voices.note_off(Some(69), &knobs.master, &oscs, &knobs.lfos());
         assert!(voices.is_sounding());
         for _ in 0..4_000 {
             render(&mut voices, &knobs);
@@ -694,9 +772,9 @@ mod tests {
         let knobs = params();
         let oscs = knobs.oscillators();
         for key in 60..64 {
-            voices.note_on(key, 1.0, &oscs, &knobs.master);
+            voices.note_on(key, 1.0, &oscs, &knobs.lfos(), &knobs.master);
         }
-        voices.note_on(64, 1.0, &oscs, &knobs.master);
+        voices.note_on(64, 1.0, &oscs, &knobs.lfos(), &knobs.master);
         let held: Vec<u8> = voices
             .slots
             .iter()
@@ -714,7 +792,7 @@ mod tests {
         let knobs = params();
         let oscs = knobs.oscillators();
         for key in 60..64 {
-            voices.note_on(key, 1.0, &oscs, &knobs.master);
+            voices.note_on(key, 1.0, &oscs, &knobs.lfos(), &knobs.master);
         }
         set_int(&knobs.master.polyphony, 2);
         render(&mut voices, &knobs);
@@ -733,9 +811,9 @@ mod tests {
         let knobs = params();
         set_mode(&knobs.master.mode, PlayMode::Mono);
         let oscs = knobs.oscillators();
-        voices.note_on(60, 1.0, &oscs, &knobs.master);
-        voices.note_on(64, 1.0, &oscs, &knobs.master);
-        voices.note_off(Some(64), &knobs.master, &oscs);
+        voices.note_on(60, 1.0, &oscs, &knobs.lfos(), &knobs.master);
+        voices.note_on(64, 1.0, &oscs, &knobs.lfos(), &knobs.master);
+        voices.note_off(Some(64), &knobs.master, &oscs, &knobs.lfos());
         let held: Vec<u8> = voices
             .slots
             .iter()
@@ -754,12 +832,12 @@ mod tests {
         set_bool(&knobs.master.legato, true);
         set_float(&knobs.amp1.attack, 1.0);
         let oscs = knobs.oscillators();
-        legato.note_on(60, 1.0, &oscs, &knobs.master);
+        legato.note_on(60, 1.0, &oscs, &knobs.lfos(), &knobs.master);
         for _ in 0..4_800 {
             render(&mut legato, &knobs);
         }
         let before = legato.slots[0].amp_level();
-        legato.note_on(67, 1.0, &oscs, &knobs.master);
+        legato.note_on(67, 1.0, &oscs, &knobs.lfos(), &knobs.master);
         let after = legato.slots[0].amp_level();
         assert!(before > 0.05, "before {before}");
         assert!(
@@ -771,11 +849,11 @@ mod tests {
         retrigger.set_sample_rate(48_000.0);
         set_mode(&knobs.master.mode, PlayMode::Mono);
         set_bool(&knobs.master.legato, false);
-        retrigger.note_on(60, 1.0, &oscs, &knobs.master);
+        retrigger.note_on(60, 1.0, &oscs, &knobs.lfos(), &knobs.master);
         for _ in 0..4_800 {
             render(&mut retrigger, &knobs);
         }
-        retrigger.note_on(67, 1.0, &oscs, &knobs.master);
+        retrigger.note_on(67, 1.0, &oscs, &knobs.lfos(), &knobs.master);
         assert!(retrigger.slots[0].amp_level() < 0.02);
     }
 
@@ -786,8 +864,8 @@ mod tests {
         let knobs = params();
         set_float(&knobs.master.portamento, 1.0);
         let oscs = knobs.oscillators();
-        voices.note_on(60, 1.0, &oscs, &knobs.master);
-        voices.note_on(72, 1.0, &oscs, &knobs.master);
+        voices.note_on(60, 1.0, &oscs, &knobs.lfos(), &knobs.master);
+        voices.note_on(72, 1.0, &oscs, &knobs.lfos(), &knobs.master);
         let gliding = voices
             .slots
             .iter()
@@ -810,9 +888,9 @@ mod tests {
 
         let mut fresh = Voices::new();
         fresh.set_sample_rate(48_000.0);
-        fresh.note_on(60, 1.0, &oscs, &knobs.master);
-        fresh.note_off(Some(60), &knobs.master, &oscs);
-        fresh.note_on(72, 1.0, &oscs, &knobs.master);
+        fresh.note_on(60, 1.0, &oscs, &knobs.lfos(), &knobs.master);
+        fresh.note_off(Some(60), &knobs.master, &oscs, &knobs.lfos());
+        fresh.note_on(72, 1.0, &oscs, &knobs.lfos(), &knobs.master);
         let jumped = fresh
             .slots
             .iter()
@@ -828,7 +906,7 @@ mod tests {
             voices.set_sample_rate(48_000.0);
             let knobs = params();
             set_float(&knobs.master.volume, volume);
-            voices.note_on(69, 1.0, &knobs.oscillators(), &knobs.master);
+            voices.note_on(69, 1.0, &knobs.oscillators(), &knobs.lfos(), &knobs.master);
             let mut sum = 0.0;
             for i in 0..2_000 {
                 let (left, right) = render(&mut voices, &knobs);
@@ -853,7 +931,7 @@ mod tests {
             unsafe {
                 let _ = InternalParamMut::_internal_set_plain_value(&knobs.filter1.cutoff, cutoff);
             }
-            voices.note_on(90, 1.0, &knobs.oscillators(), &knobs.master);
+            voices.note_on(90, 1.0, &knobs.oscillators(), &knobs.lfos(), &knobs.master);
             let mut sum = 0.0;
             for i in 0..4_000 {
                 let (left, right) = render(&mut voices, &knobs);
@@ -880,7 +958,7 @@ mod tests {
                 let _ =
                     InternalParamMut::_internal_set_plain_value(&knobs.filter_env1.amount, amount);
             }
-            voices.note_on(69, 1.0, &knobs.oscillators(), &knobs.master);
+            voices.note_on(69, 1.0, &knobs.oscillators(), &knobs.lfos(), &knobs.master);
             let mut sum = 0.0;
             for i in 0..4_000 {
                 let (left, right) = render(&mut voices, &knobs);

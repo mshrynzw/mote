@@ -14,7 +14,7 @@
 | Phase 2 LFO | 2 |  |  | 2026-11-12 | 2026-11-12 |
 | Phase 2 Mod Env と LFO の割り当て | 4 |  |  | 2026-11-12 | 2026-11-12 |
 | Phase 3 HTML/CSS の Main | 2 |  |  | 2026-11-12 |  |
-| Phase 3 HTML/CSS の Preset | 1 |  |  |  |  |
+| Phase 3 HTML/CSS の Preset | 1 |  |  | 2026-11-12 | 2026-11-12 |
 | Phase 3 HTML/CSS の Setting | 1 |  |  |  |  |
 | Phase 3 ブラウザの見た目をプラグインの画面として描く | 5 |  |  |  |  |
 | Phase 3 設定の保存 | 2 |  |  |  |  |

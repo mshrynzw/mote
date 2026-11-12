@@ -165,7 +165,7 @@ impl Oscillator {
         &mut self,
         params: &OscParams,
         bank: &WaveBank,
-        midi_note: Option<u8>,
+        midi_note: Option<f32>,
         sample_rate: f32,
     ) -> (f32, f32) {
         // `smoothed.next` は 1 サンプルにつき 1 回だけ呼ぶ。呼ばないとノブの動きが遅れる。
@@ -220,8 +220,9 @@ impl Default for Oscillator {
     }
 }
 
-fn note_frequency(note: u8, pitch_cents: f32) -> f32 {
-    nice_plug::util::midi_key_to_freq(note) * cents_to_ratio(pitch_cents)
+fn note_frequency(note: f32, pitch_cents: f32) -> f32 {
+    // 440 Hz は MIDI ノート 69。小数のノートは、ポルタメントの途中の音程。
+    440.0 * 2.0f32.powf((note - 69.0) / 12.0) * cents_to_ratio(pitch_cents)
 }
 
 fn cents_to_ratio(cents: f32) -> f32 {
@@ -268,21 +269,21 @@ mod tests {
 
     #[test]
     fn center_pitch_is_midi_note() {
-        let hz = note_frequency(69, 0.0);
+        let hz = note_frequency(69.0, 0.0);
         assert!((hz - 440.0).abs() < 0.01);
     }
 
     #[test]
     fn one_octave_doubles_frequency() {
-        let root = note_frequency(69, 0.0);
-        let up = note_frequency(69, 1200.0);
+        let root = note_frequency(69.0, 0.0);
+        let up = note_frequency(69.0, 1200.0);
         assert!((up / root - 2.0).abs() < 0.001);
     }
 
     #[test]
     fn fine_cent_is_a_hundredth_of_a_semitone() {
-        let root = note_frequency(69, 0.0);
-        let fine = note_frequency(69, 100.0);
+        let root = note_frequency(69.0, 0.0);
+        let fine = note_frequency(69.0, 100.0);
         let semitone = 2.0f32.powf(1.0 / 12.0);
         assert!((fine / root - semitone).abs() < 0.001);
     }

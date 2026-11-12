@@ -9,6 +9,7 @@ use std::sync::Arc;
 use crate::envelope::{bind_amp_sync, AmpParams, AmpSyncHub};
 use crate::filter::{bind_filter_sync, FilterParams, FilterSyncHub};
 use crate::filter_env::{bind_filter_env_sync, FilterEnvParams, FilterEnvSyncHub};
+use crate::master::MasterParams;
 use crate::oscillator::OscParams;
 
 #[derive(Params)]
@@ -45,6 +46,8 @@ pub struct MoteParams {
     pub amp3: AmpParams,
     #[nested(id_prefix = "a4", group = "D Amp Env")]
     pub amp4: AmpParams,
+    #[nested(id_prefix = "master", group = "Master")]
+    pub master: MasterParams,
 }
 
 impl Default for MoteParams {
@@ -70,6 +73,7 @@ impl Default for MoteParams {
             amp2: AmpParams::new('B', 1, amp_hub.clone()),
             amp3: AmpParams::new('C', 2, amp_hub.clone()),
             amp4: AmpParams::new('D', 3, amp_hub),
+            master: MasterParams::new(),
         }
     }
 }

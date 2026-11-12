@@ -13,6 +13,7 @@ use std::sync::Arc;
 mod envelope;
 mod filter;
 mod filter_env;
+mod master;
 mod oscillator;
 mod params;
 mod unison;
@@ -20,7 +21,7 @@ mod voice;
 mod wavetable;
 
 use params::MoteParams;
-use voice::NoteVoice;
+use voice::Voices;
 
 /// DAW に見えるプラグイン本体。
 ///
@@ -28,8 +29,8 @@ use voice::NoteVoice;
 pub struct Mote {
     /// ホストへ渡すパラメータ一覧。オシレーター 4 基分のノブ。
     params: Arc<MoteParams>,
-    /// いま鳴っている 1 ノート。中に Classic のオシレーターが 4 基ある。
-    voice: NoteVoice,
+    /// 最大 16 ノート。鳴っていないスロットは計算しない。
+    voices: Voices,
 }
 
 // `Default` を実装すると `Mote::default()` で初期状態を作れる。
@@ -44,7 +45,7 @@ impl Default for Mote {
         params.bind_filter_env_sync();
         Self {
             params,
-            voice: NoteVoice::new(),
+            voices: Voices::new(),
         }
     }
 }
@@ -60,16 +61,27 @@ impl Mote {
                 // キー番号が無いイベント（どのキーでもよい、という指定）は無視する。
                 // `if let Some(note)` は、値があるときだけ中に入る。
                 if let Some(note) = key.number() {
-                    self.voice
-                        .note_on(note, velocity, &self.params.oscillators());
+                    self.voices.note_on(
+                        note,
+                        velocity,
+                        &self.params.oscillators(),
+                        &self.params.master,
+                    );
                 }
             }
             // `|` は「この形でも、あの形でも」。どちらも Release に入る。
             // `key.number()` が None のときは、鳴っている音をすべて Release にする。
             NoteEvent::NoteOff { key, .. } | NoteEvent::Choke { key, .. } => {
-                self.voice.note_off(key.number());
+                self.voices.note_off(
+                    key.number(),
+                    &self.params.master,
+                    &self.params.oscillators(),
+                );
             }
-            // ピッチベンドなどは Phase 1 では無視する。
+            // `value` の 0.5 が中央。上下は Bend Range の半音数まで。
+            NoteEvent::MidiPitchBend { value, .. } => {
+                self.voices.set_bend(value);
+            }
             _ => {}
         }
     }
@@ -94,8 +106,8 @@ impl Plugin for Mote {
         ..AudioIOLayout::const_default()
     }];
 
-    // ノートオンとノートオフを受け取る。コントロールチェンジは Phase 1 では受け取らない。
-    const MIDI_INPUT: MidiConfig = MidiConfig::Basic;
+    // ノートとピッチベンドを受け取る。VST3 ではベンドを届けるために CC も含む。
+    const MIDI_INPUT: MidiConfig = MidiConfig::MidiCCs;
     // バッファの途中にある MIDI も、そのサンプル位置で処理する。
     const SAMPLE_ACCURATE_AUTOMATION: bool = true;
 
@@ -120,14 +132,14 @@ impl Plugin for Mote {
         buffer_config: &BufferConfig,
         _context: &mut impl ActivateContext<Self>,
     ) -> bool {
-        self.voice.set_sample_rate(buffer_config.sample_rate);
+        self.voices.set_sample_rate(buffer_config.sample_rate);
         // false を返すと、プラグインの起動失敗になる。
         true
     }
 
     /// 再生位置のリセット。オーディオ処理の途中でも呼ばれることがあるので、確保はしない。
     fn reset(&mut self) {
-        self.voice.reset();
+        self.voices.reset();
     }
 
     /// 数十〜数百サンプルずつ繰り返し呼ばれる、音の本体。
@@ -154,11 +166,12 @@ impl Plugin for Mote {
                 next_event = context.next_event();
             }
 
-            let (left, right) = self.voice.next_sample(
+            let (left, right) = self.voices.next_sample(
                 &self.params.oscillators(),
                 &self.params.filters(),
                 &self.params.filter_envelopes(),
                 &self.params.amp_envelopes(),
+                &self.params.master,
             );
             // 左右で値が違う。`enumerate` の 0 が左、1 が右。
             for (channel, channel_sample) in channel_samples.into_iter().enumerate() {
@@ -168,7 +181,7 @@ impl Plugin for Mote {
 
         // 音が残っているあいだは、ホストに処理を続けてもらう。
         // 無音なら通常終了。次のノートオンは、そのときの process で受け取る。
-        if self.voice.is_sounding() {
+        if self.voices.is_sounding() {
             ProcessStatus::KeepAlive
         } else {
             ProcessStatus::Normal

@@ -171,8 +171,8 @@ fn flush(value: f32) -> f32 {
 }
 
 /// MIDI ノート 60 を基準に、Amount の割合だけ Cutoff を上下する。
-pub fn tracked_cutoff(cutoff_hz: f32, note: u8, amount: f32) -> f32 {
-    let octaves = (note as f32 - 60.0) / 12.0 * amount;
+pub fn tracked_cutoff(cutoff_hz: f32, note: f32, amount: f32) -> f32 {
+    let octaves = (note - 60.0) / 12.0 * amount;
     cutoff_hz * 2.0f32.powf(octaves)
 }
 
@@ -254,13 +254,13 @@ impl Filter {
         params: &FilterParams,
         left: f32,
         right: f32,
-        note: Option<u8>,
+        note: Option<f32>,
         sample_rate: f32,
         env_octaves: f32,
     ) -> (f32, f32) {
         let sample_rate = sample_rate.max(1.0);
         let amount = (params.amount.value() / 100.0).clamp(0.0, 1.0);
-        let target_cutoff = tracked_cutoff(params.cutoff.value(), note.unwrap_or(60), amount)
+        let target_cutoff = tracked_cutoff(params.cutoff.value(), note.unwrap_or(60.0), amount)
             .clamp(20.0, sample_rate * 0.9);
         // ノブ側だけを滑らかにする。エンベロープは毎サンプル動くので、この追従のあとで掛ける。
         let base = glide(
@@ -706,7 +706,7 @@ mod tests {
             let sample = (phase * std::f32::consts::TAU).sin();
             phase = (phase + step) % 1.0;
             let (left, right) =
-                filter.next_sample(params, sample, sample, Some(note), 48_000.0, 0.0);
+                filter.next_sample(params, sample, sample, Some(f32::from(note)), 48_000.0, 0.0);
             assert!(left.is_finite() && right.is_finite());
             if i > 3_000 {
                 peak = peak.max(left.abs());
@@ -717,15 +717,15 @@ mod tests {
 
     #[test]
     fn keytrack_doubles_cutoff_each_octave() {
-        let full = tracked_cutoff(1_000.0, 72, 1.0);
-        let half = tracked_cutoff(1_000.0, 72, 0.5);
-        let still = tracked_cutoff(1_000.0, 72, 0.0);
-        let down = tracked_cutoff(1_000.0, 48, 1.0);
+        let full = tracked_cutoff(1_000.0, 72.0, 1.0);
+        let half = tracked_cutoff(1_000.0, 72.0, 0.5);
+        let still = tracked_cutoff(1_000.0, 72.0, 0.0);
+        let down = tracked_cutoff(1_000.0, 48.0, 1.0);
         assert!((full - 2_000.0).abs() < 0.01);
         assert!((half - 1_414.213_5).abs() < 0.1);
         assert!((still - 1_000.0).abs() < 0.01);
         assert!((down - 500.0).abs() < 0.01);
-        assert!((tracked_cutoff(1_000.0, 60, 1.0) - 1_000.0).abs() < 0.01);
+        assert!((tracked_cutoff(1_000.0, 60.0, 1.0) - 1_000.0).abs() < 0.01);
     }
 
     #[test]
@@ -735,7 +735,7 @@ mod tests {
         let mut last_left = 0.0;
         let mut last_right = 0.0;
         for _ in 0..1_000 {
-            let (left, right) = filter.next_sample(&params, 0.5, -0.25, Some(60), 48_000.0, 0.0);
+            let (left, right) = filter.next_sample(&params, 0.5, -0.25, Some(60.0), 48_000.0, 0.0);
             assert!(left.is_finite() && right.is_finite());
             last_left = left;
             last_right = right;
@@ -814,9 +814,9 @@ mod tests {
         let mut differed = false;
         for i in 0..2_000 {
             let sample = 0.4 * (i as f32 * 440.0 / 48_000.0 * std::f32::consts::TAU).sin();
-            let (left, _) = plain.next_sample(&clean, sample, sample, Some(60), 48_000.0, 0.0);
+            let (left, _) = plain.next_sample(&clean, sample, sample, Some(60.0), 48_000.0, 0.0);
             let (driven_left, _) =
-                hot.next_sample(&driven, sample, sample, Some(60), 48_000.0, 0.0);
+                hot.next_sample(&driven, sample, sample, Some(60.0), 48_000.0, 0.0);
             assert!(driven_left.is_finite());
             assert!(driven_left.abs() <= 1.01);
             if i > 1_000 && (left - driven_left).abs() > 0.05 {

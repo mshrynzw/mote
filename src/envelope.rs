@@ -49,6 +49,11 @@ impl AmpEnvelope {
         self.stage != Stage::Idle
     }
 
+    /// いまの高さ。0 が無音、1 が Attack の終わり。
+    pub fn level(&self) -> f32 {
+        self.level
+    }
+
     /// ノートオン。Attack の頭に戻す。
     pub fn start(&mut self) {
         self.stage = Stage::Attack;

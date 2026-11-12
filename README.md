@@ -2,12 +2,12 @@
 
 Windows 11 向けのウェーブテーブル・シンセサイザーです。DAW に読み込ませる形式は VST3 です。
 
-軽い動作を仕様にします。エンジンの上限は同時発音 128、Unison 16 です。
-日常の目安として、16 音、Oscillator 4 基、Unison 8 でも 48 kHz で CPU のコアを占有しきらないことを目標にします。
+軽い動作を仕様にします。MIDI ノートは最大 16、Unison は最大 16 です。
+日常の目安として、Polyphony 16、Oscillator 4 基、Unison 8 でも 48 kHz で CPU のコアを占有しきらないことを目標にします。
 
 ## いまの段階
 
-Phase 2 の途中です。オシレーターは 4 基で、Classic（サイン、三角、ノコギリ、パルス）と Unison が鳴ります。初期状態でオンなのは 1 基目だけです。同時に鳴るノートは 1 つで、あとから押したキーが優先されます。Amp Env の Attack、Decay、Sustain、Release と、それぞれの Curve が鳴る。A の Sync をオンにして Sync B、Sync C、Sync D を選ぶと、その列のノブが A と双方向に揃う。各オシレーターは自分のフィルターを通る。初期値は Lowpass で Cutoff が 20 kHz なので、Cutoff を下げるまで音はほぼそのままである。Filter Env は同じ番号の Cutoff だけを動かす。Amount の初期値は 0% なので、上げるまで Cutoff は動かない。Mod Env、LFO、Stacked Saw、Wavetable、独自の画面はまだない。
+Phase 2 の途中です。オシレーターは 4 基で、Classic（サイン、三角、ノコギリ、パルス）と Unison が鳴ります。初期状態でオンなのは 1 基目だけです。Polyphony の初期値は 4 で、Mode の初期値は Poly です。Amp Env と Filter Env が鳴り、各オシレーターは自分のフィルターを通る。Master では音量、移調、ベンド、Mono、Legato、Portamento を扱います。Mod Env、LFO、Stacked Saw、Wavetable、独自の画面はまだない。
 
 ## ビルド
 

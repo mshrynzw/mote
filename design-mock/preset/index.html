@@ -1,0 +1,1399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mote Preset Screen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600&family=Unbounded:wght@500&display=swap">
+<style>
+/* Layout: the same artboard, light and panels as the Main screen.
+   Left: search, sort and Save above the tags and the preset list.
+   Right: the selected preset with every field; its name can be renamed there.
+   Save swaps the right panel for a short form. Nothing is written to disk.
+   Narrower than the artboard, the right panel drops under the list, and under
+   720px each row folds onto two lines. Type and controls never shrink. */
+@property --rim { syntax: "<angle>"; inherits: true; initial-value: 330deg; }
+@property --lit { syntax: "<number>"; inherits: true; initial-value: .6; }
+
+:root {
+  --bg: rgba(15, 24, 57, 0.75);      /* panel plate, as on Main */
+  --plate: rgba(15, 24, 57, 0.75);    /* a denser plate behind the list and the fields */
+  --navy: rgb(15 24 57);             /* text on a selected item */
+  --ink: rgb(241 241 241);           /* text */
+  --line: rgb(164 182 183);          /* frames and secondary lines */
+  --on: rgb(159 197 233);            /* selected fill, active values */
+  --thread: rgb(164 182 183 / .72);
+
+  --font-ui: "Barlow Semi Condensed", "Arial Narrow", "Roboto Condensed", "Segoe UI", system-ui, sans-serif;
+  --font-mark: "Unbounded", "Barlow Semi Condensed", "Segoe UI", system-ui, sans-serif;
+
+  --side: 344px;     /* selected preset column */
+  --row: 30px;       /* one list row */
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--navy); scrollbar-gutter: stable; }
+body {
+  margin: 0;
+  padding-block: 24px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  /* still fallback for the sky */
+  background:
+    radial-gradient(110% 70% at 36% -14%, rgb(159 197 233 / .22), transparent 62%),
+    radial-gradient(70% 60% at 88% 112%, rgb(164 182 183 / .10), transparent 70%),
+    var(--navy);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: var(--on); color: var(--navy); }
+h1, h2, h3, p, dl, dd { margin: 0; font-weight: inherit; }
+button, input, textarea { font: inherit; color: inherit; }
+.defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- Sky (the same light as Main) ---------- */
+#sky {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  visibility: hidden;       /* shown once the first frame is drawn */
+}
+#sky.on { visibility: visible; }
+
+/* ---------- Artboard ---------- */
+.stage { position: relative; z-index: 1; container: stage / inline-size; }
+.screen {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--side);
+  grid-template-rows: auto auto 1fr;
+  grid-template-areas: "bar brand" "tags side" "list side";
+  gap: 18px 15px;
+  max-width: 1188px;
+  margin: 0 auto;
+  padding: 15px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgb(15 24 57 / .16), rgb(15 24 57 / .44));
+}
+/* lit edge: brightest where the edge faces the light (--rim, set by the script) */
+.screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: conic-gradient(from calc(var(--rim) - 180deg),
+    rgb(164 182 183 / .44) 0deg,
+    rgb(164 182 183 / .62) 95deg,
+    rgb(159 197 233 / .95) 145deg,
+    var(--ink) 180deg,
+    rgb(159 197 233 / .95) 215deg,
+    rgb(164 182 183 / .62) 265deg,
+    rgb(164 182 183 / .44) 360deg);
+  -webkit-mask: linear-gradient(var(--navy) 0 0) content-box, linear-gradient(var(--navy) 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(var(--navy) 0 0) content-box exclude, linear-gradient(var(--navy) 0 0);
+  opacity: calc(.62 + .38 * var(--lit));
+}
+
+.brand {
+  grid-area: brand;
+  align-self: center;
+  justify-self: end;
+  padding: 3px 3px 0 0;
+  font: 500 24px/1 var(--font-mark);
+  letter-spacing: .02em;
+  color: var(--ink);
+  filter: drop-shadow(0 1px 3px rgb(15 24 57 / .95)) drop-shadow(0 0 16px rgb(15 24 57 / .7)) drop-shadow(0 0 12px rgb(159 197 233 / .35));
+}
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .brand {
+    background: linear-gradient(105deg, var(--ink) 38%, var(--on));
+    -webkit-background-clip: text;
+            background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}
+
+/* ---------- Buttons: the Main tab look; selected = light-blue fill, navy text ---------- */
+.btn {
+  appearance: none;
+  margin: 0;
+  padding: 6px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 600 12px/1 var(--font-ui);
+  letter-spacing: .06em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.btn:hover { border-color: var(--on); }
+.btn[aria-pressed="true"] {
+  border-color: var(--on);
+  background: var(--on);
+  color: var(--navy);
+  box-shadow: 0 0 12px rgb(159 197 233 / .3);
+}
+.mini {
+  flex: none;
+  appearance: none;
+  height: 24px;
+  margin: 0;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 600 11px/1 var(--font-ui);
+  letter-spacing: .07em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.mini:hover { border-color: var(--on); }
+.mini.primary { border-color: var(--on); color: var(--on); box-shadow: 0 0 10px rgb(159 197 233 / .22); }
+.mini.primary:hover { background: rgb(159 197 233 / .16); }
+:is(.btn, .mini, .chip, .edge):focus-visible { outline: 1px solid var(--on); outline-offset: 2px; }
+
+/* ---------- Bar: search, sort, save ---------- */
+.bar {
+  grid-area: bar;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+}
+.search { position: relative; flex: 0 1 260px; min-width: 190px; }
+.search svg {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  translate: 0 -50%;
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 2;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+.search input {
+  appearance: none;
+  width: 100%;
+  height: 30px;
+  margin: 0;
+  padding: 0 10px 0 31px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--plate);
+  font: 500 13px/28px var(--font-ui);
+  letter-spacing: .02em;
+}
+.search input::-webkit-search-decoration,
+.search input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+.search input::placeholder { color: var(--line); opacity: 1; }
+.search input:focus-visible { outline: 1px solid var(--on); outline-offset: 1px; border-color: var(--on); }
+.sort { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.sort > span {
+  margin-right: 6px;
+  font: 600 10.5px/1 var(--font-ui);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+/* ---------- Panels: a navy plate, a lit rim, a soft glow on the side facing the light ---------- */
+.panel {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px 12px 12px;
+  border-radius: 7px;
+  box-shadow: 0 12px 26px -14px rgb(15 24 57 / .95);
+}
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border: 1px solid transparent;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--bg), var(--bg)) padding-box,
+    conic-gradient(from calc(var(--rim) - 180deg),
+      rgb(164 182 183 / .5) 0deg,
+      rgb(164 182 183 / .66) 95deg,
+      var(--on) 145deg,
+      var(--ink) 180deg,
+      var(--on) 215deg,
+      rgb(164 182 183 / .66) 265deg,
+      rgb(164 182 183 / .5) 360deg) border-box;
+}
+.panel::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: -2;
+  border-radius: inherit;
+  pointer-events: none;
+  background: conic-gradient(from calc(var(--rim) - 180deg),
+    transparent 0deg 100deg,
+    rgb(159 197 233 / .6) 150deg,
+    rgb(241 241 241 / .75) 180deg,
+    rgb(159 197 233 / .6) 210deg,
+    transparent 260deg 360deg);
+  filter: blur(9px);
+  opacity: calc(.3 + .7 * var(--lit));
+}
+.panel > h2 {
+  position: absolute;
+  top: -6px;
+  left: 7px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--bg);
+  font: 600 10.5px/13px var(--font-ui);
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.edge {                     /* a pill that sits on the top edge, like Sync on Main */
+  position: absolute;
+  top: -8px;
+  right: 9px;
+  display: inline-flex;
+  align-items: center;
+  height: 17px;
+  margin: 0;
+  padding: 0 8px;
+  border: 1px solid rgb(164 182 183 / .85);
+  border-radius: 9px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 500 10.5px/1 var(--font-ui);
+  letter-spacing: .03em;
+  white-space: nowrap;
+}
+.edge[hidden] { display: none; }
+button.edge { appearance: none; cursor: pointer; }
+button.edge:hover { border-color: var(--on); color: var(--on); }
+
+/* labels with a fading rule, the Main group label at a size meant for reading */
+.lbl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font: 600 9.5px/12px var(--font-ui);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.lbl::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--line), rgb(164 182 183 / 0)); }
+.lbl em { font-style: normal; color: var(--on); letter-spacing: .1em; }
+
+/* ---------- Tags ---------- */
+.tagbox { grid-area: tags; padding: 17px 12px 13px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  margin: 0;
+  padding: 0 10px 0 8px;
+  border: 1px solid rgb(164 182 183 / .8);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 500 12px/1 var(--font-ui);
+  letter-spacing: .02em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.chip::before {             /* a mote: hollow, filled when the tag is chosen */
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+}
+button.chip:hover { border-color: var(--on); }
+.chip[aria-pressed="true"] {
+  border-color: var(--on);
+  background: var(--on);
+  color: var(--navy);
+  box-shadow: 0 0 12px rgb(159 197 233 / .35);
+}
+.chip[aria-pressed="true"]::before { border-color: var(--navy); background: var(--navy); }
+.chips.static .chip { cursor: default; }
+
+/* ---------- Preset list ---------- */
+.list { --bg: var(--plate); grid-area: list; padding: 14px 8px 8px; gap: 4px; }
+.cols {
+  display: grid;
+  grid-template-columns:
+    minmax(150px, 2.3fr) minmax(62px, 1fr) minmax(84px, 1.1fr) minmax(78px, 1.05fr) 84px 72px;
+  column-gap: 14px;
+  align-items: center;
+}
+.thead {
+  height: 27px;
+  padding: 0 12px;
+  border-bottom: 1px solid rgb(164 182 183 / .45);
+  font: 600 9.5px/1 var(--font-ui);
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+.thead .on { color: var(--on); }
+.rows {
+  height: calc(var(--row) * 17);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(164 182 183 / .55) transparent;
+  border-radius: 6px;
+}
+.rows:focus { outline: none; }
+.rows:focus-visible { outline: 1px solid var(--on); outline-offset: 2px; }
+.row {
+  position: relative;
+  height: var(--row);
+  padding: 0 12px;
+  border-radius: 6px;
+  font: 500 12.5px/1 var(--font-ui);
+  letter-spacing: .015em;
+  cursor: pointer;
+}
+.row + .row::before {       /* hairline between rows */
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 1px;
+  background: rgb(164 182 183 / .16);
+}
+.row:hover { background: rgb(241 241 241 / .06); }
+.row[aria-selected="true"] {
+  background: var(--on);
+  color: var(--navy);
+  box-shadow: 0 0 18px rgb(159 197 233 / .38);
+}
+.row[aria-selected="true"]::before,
+.row[aria-selected="true"] + .row::before { display: none; }
+.row > :not(.meta), .meta > * {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nm { font-weight: 600; font-size: 13.5px; letter-spacing: .01em; }
+.meta { display: contents; }
+.dt { font-variant-numeric: tabular-nums; }
+
+/* rating: five motes, filled up to the rating. Unrated is a dash, never five hollow motes. */
+.rt { display: flex; align-items: center; gap: 4px; }
+.rt i {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+}
+.rt i.f { border-color: var(--on); background: var(--on); box-shadow: 0 0 5px rgb(159 197 233 / .7); }
+.row[aria-selected="true"] .rt i { border-color: var(--navy); }
+.row[aria-selected="true"] .rt i.f { background: var(--navy); box-shadow: none; }
+
+.none {
+  display: grid;
+  justify-items: start;
+  align-content: center;
+  gap: 12px;
+  height: calc(var(--row) * 17);
+  padding: 0 14px;
+  font: 500 14px/1.45 var(--font-ui);
+}
+.none[hidden] { display: none; }
+
+/* ---------- Selected preset, and the save form in the same place ---------- */
+.side { grid-area: side; display: grid; min-width: 0; }
+.side > .panel { --bg: var(--plate); padding: 24px 18px 16px; gap: 20px; }
+.side > .panel[hidden] { display: none; }
+.pname[hidden] { display: none; }
+.pname h3 {
+  margin: 0;
+  font: 600 27px/1.1 var(--font-ui);
+  letter-spacing: .01em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.rename { display: grid; gap: 8px; }
+.rename[hidden] { display: none; }
+.rename .btns { display: flex; justify-content: flex-end; gap: 6px; }
+.rating-lg { display: flex; align-items: center; gap: 10px; min-height: 12px; margin-top: -6px; font: 500 13.5px/1 var(--font-ui); }
+.rating-lg .rt { gap: 6px; }
+.rating-lg .rt i { width: 12px; height: 12px; }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 17px 18px; }
+.fields > div { display: grid; gap: 7px; min-width: 0; }
+.fields dd { font: 500 15px/1.25 var(--font-ui); overflow-wrap: anywhere; }
+.block { display: grid; gap: 9px; }
+.desc { max-width: 62ch; font: 500 14.5px/1.55 var(--font-ui); letter-spacing: .01em; }
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid rgb(164 182 183 / .3);
+}
+.foot[hidden] { display: none; }
+.foot .acts { display: flex; gap: 6px; margin-left: auto; }
+.foot .mini, .actions .mini { height: 28px; padding: 0 13px; font-size: 12px; }
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font: 500 12.5px/1.3 var(--font-ui);
+}
+.status:not(:empty)::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--on);
+  box-shadow: 0 0 6px rgb(159 197 233 / .8);
+}
+
+/* form fields */
+.form { display: flex; flex: 1; flex-direction: column; gap: 13px; }
+.f { display: grid; gap: 6px; min-width: 0; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 13px 14px; }
+.input {
+  appearance: none;
+  width: 100%;
+  height: 30px;
+  margin: 0;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--plate);
+  font: 500 13px/28px var(--font-ui);
+  letter-spacing: .02em;
+}
+.input.big { height: 40px; padding: 0 10px; font: 600 22px/38px var(--font-ui); border-color: var(--on); }
+textarea.input { height: auto; min-height: 96px; padding: 7px 9px; line-height: 1.4; resize: vertical; }
+.input::placeholder { color: var(--line); opacity: 1; }
+.input:focus-visible { outline: 1px solid var(--on); outline-offset: 1px; border-color: var(--on); }
+.input[aria-invalid="true"] { border-color: var(--on); box-shadow: 0 0 0 1px var(--on); }
+.rpick { display: flex; flex-wrap: wrap; gap: 4px; }
+.rpick .btn { padding: 6px 9px; }
+.note { flex: 1 1 100%; font: 500 12.5px/1.4 var(--font-ui); }
+.err { font: 500 12.5px/1.35 var(--font-ui); }
+.err[hidden] { display: none; }
+.err::before { content: "\2192\00a0"; color: var(--on); }
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px 8px;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid rgb(164 182 183 / .3);
+}
+
+/* ---------- Narrower windows: wrap, never shrink ---------- */
+@container stage (width < 1100px) {
+  .screen {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: none;
+    grid-template-areas: "bar brand" "tags tags" "list list" "side side";
+  }
+  .brand { align-self: start; }       /* stays top right, away from the light */
+  .rows, .none { height: calc(var(--row) * 14); }
+}
+@container stage (width < 720px) {
+  .thead { display: none; }
+  .row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "nm rt" "meta meta";
+    height: auto;
+    row-gap: 6px;
+    padding: 9px 12px;
+  }
+  .nm { grid-area: nm; }
+  .rt { grid-area: rt; }
+  .meta { grid-area: meta; display: flex; flex-wrap: wrap; row-gap: 2px; font-size: 12px; }
+  .meta > .empty { display: none; }
+  .meta > :not(.empty) ~ :not(.empty)::before { content: "\00b7"; margin: 0 7px; }
+  .rows, .none { height: 440px; }
+}
+@container stage (width < 460px) {
+  .search { flex: 1 1 100%; }
+  .bar > .primary { margin-left: 0; }
+  .fields, .two { grid-template-columns: 1fr; }
+}
+
+.no-gl .panel { box-shadow: 0 0 18px rgb(159 197 233 / .10); }
+</style>
+</head>
+<body>
+<svg class="defs" aria-hidden="true">
+  <symbol id="find" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.4 15.4 20.5 20.5"/></symbol>
+</svg>
+
+<canvas id="sky" aria-hidden="true"></canvas>
+
+<main class="stage">
+<div class="screen">
+
+<h1 class="brand">Mote</h1>
+
+<div class="bar">
+  <label class="search">
+    <span class="sr">Search preset names</span>
+    <svg aria-hidden="true"><use href="#find"/></svg>
+    <input id="search" type="search" placeholder="Search names" autocomplete="off" spellcheck="false">
+  </label>
+  <div class="sort" role="group" aria-labelledby="sort-label">
+    <span id="sort-label">Sort</span>
+    <button type="button" class="btn" data-sort="name" aria-pressed="true">Name</button>
+    <button type="button" class="btn" data-sort="category" aria-pressed="false">Category</button>
+    <button type="button" class="btn" data-sort="created" aria-pressed="false">Created</button>
+    <button type="button" class="btn" data-sort="rating" aria-pressed="false">Rating</button>
+    <button type="button" class="btn" data-sort="author" aria-pressed="false">Author</button>
+  </div>
+</div>
+
+<section class="panel tagbox" aria-labelledby="tags-title">
+  <h2 id="tags-title">Tags</h2>
+  <button type="button" class="edge" id="clear-tags" hidden>Clear</button>
+  <div class="chips" id="chips" role="group" aria-labelledby="tags-title"></div>
+</section>
+
+<section class="panel list" aria-labelledby="list-title">
+  <h2 id="list-title">Presets</h2>
+  <span class="edge" id="count" aria-live="polite"></span>
+  <div class="thead cols" aria-hidden="true">
+    <span data-key="name">Name</span>
+    <span data-key="category">Category</span>
+    <span>Library</span>
+    <span data-key="author">Author</span>
+    <span data-key="created">Created</span>
+    <span data-key="rating">Rating</span>
+  </div>
+  <div class="rows" id="rows" role="listbox" aria-labelledby="list-title" tabindex="0"></div>
+  <div class="none" id="none" hidden>
+    <p id="none-text"></p>
+    <button type="button" class="mini" id="clear-all">Clear search and tags</button>
+  </div>
+</section>
+
+<div class="side">
+  <section class="panel detail" id="detail" aria-labelledby="detail-title">
+    <h2 id="detail-title">Selected Preset</h2>
+    <div class="pname" id="name-view">
+      <h3 id="d-name"></h3>
+    </div>
+    <form class="rename" id="rename-form" hidden novalidate>
+      <label class="sr" for="rename-input">Preset name</label>
+      <input class="input big" id="rename-input" autocomplete="off" spellcheck="false">
+      <p class="err" id="rename-err" hidden>A preset needs a name.</p>
+      <div class="btns">
+        <button type="button" class="mini" id="rename-cancel">Cancel</button>
+        <button type="submit" class="mini primary">Done</button>
+      </div>
+    </form>
+    <div class="rating-lg" id="d-rating"></div>
+    <dl class="fields">
+      <div><dt class="lbl">Category</dt><dd id="d-category"></dd></div>
+      <div><dt class="lbl">Library</dt><dd id="d-library"></dd></div>
+      <div><dt class="lbl">Genre</dt><dd id="d-genre"></dd></div>
+      <div><dt class="lbl">Subgenre</dt><dd id="d-subgenre"></dd></div>
+      <div><dt class="lbl">Author</dt><dd id="d-author"></dd></div>
+      <div><dt class="lbl">Created</dt><dd id="d-created"></dd></div>
+    </dl>
+    <div class="block"><p class="lbl">Tags</p><div class="chips static" id="d-tags"></div></div>
+    <div class="block"><p class="lbl">Description</p><p class="desc" id="d-desc"></p></div>
+    <div class="foot" id="detail-foot">
+      <p class="status" id="status" role="status"></p>
+      <div class="acts">
+        <button type="button" class="mini" id="rename-open">Rename</button>
+        <button type="button" class="mini primary" id="save-open">Save as New</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel saver" id="saver" aria-labelledby="saver-title" hidden>
+    <h2 id="saver-title">Save Current Sound</h2>
+    <form class="form" id="save-form" novalidate>
+      <label class="f">
+        <span class="lbl">Name <em>Required</em></span>
+        <input class="input" id="s-name" autocomplete="off" spellcheck="false" placeholder="Name this sound">
+      </label>
+      <p class="err" id="save-err" hidden>A preset needs a name.</p>
+      <div class="two">
+        <label class="f"><span class="lbl">Category</span><input class="input" id="s-category" list="dl-category" autocomplete="off" placeholder="Bass, Lead, Pad"></label>
+        <label class="f"><span class="lbl">Genre</span><input class="input" id="s-genre" list="dl-genre" autocomplete="off"></label>
+      </div>
+      <div class="two">
+        <label class="f"><span class="lbl">Subgenre</span><input class="input" id="s-subgenre" list="dl-subgenre" autocomplete="off"></label>
+        <label class="f"><span class="lbl">Tags</span><input class="input" id="s-tags" autocomplete="off" placeholder="Warm, Wide"></label>
+      </div>
+      <div class="f" role="group" aria-labelledby="s-rating-label">
+        <span class="lbl" id="s-rating-label">Rating</span>
+        <div class="rpick" id="s-rating">
+          <button type="button" class="btn" data-rating="" aria-pressed="true">Unrated</button>
+          <button type="button" class="btn" data-rating="0" aria-pressed="false">0</button>
+          <button type="button" class="btn" data-rating="1" aria-pressed="false">1</button>
+          <button type="button" class="btn" data-rating="2" aria-pressed="false">2</button>
+          <button type="button" class="btn" data-rating="3" aria-pressed="false">3</button>
+          <button type="button" class="btn" data-rating="4" aria-pressed="false">4</button>
+          <button type="button" class="btn" data-rating="5" aria-pressed="false">5</button>
+        </div>
+      </div>
+      <label class="f"><span class="lbl">Description</span><textarea class="input" id="s-desc" rows="4"></textarea></label>
+      <div class="actions">
+        <p class="note">Saves to the User library. Author and Created are filled in when you save.</p>
+        <button type="button" class="mini" id="save-cancel">Cancel</button>
+        <button type="submit" class="mini primary">Save Preset</button>
+      </div>
+    </form>
+  </section>
+</div>
+
+</div>
+</main>
+
+<datalist id="dl-category"></datalist>
+<datalist id="dl-genre"></datalist>
+<datalist id="dl-subgenre"></datalist>
+
+<script>
+/* Preset screen mock. The list lives in memory: search, tags, sort, select, rename
+   and save change this page only. Nothing plays audio and nothing is written to disk.
+   The sky below is the Main screen's light, unchanged. */
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+
+  /* ---------- Sample data. Ids stay in the data and never reach the screen. ---------- */
+  const LIBRARIES = [
+    { id: "lib-factory", name: "Mote Factory" },   /* ships with Mote */
+    { id: "lib-user", name: "User" },              /* the user's saves */
+  ];
+  const USER_LIBRARY = "lib-user";
+  const USER_AUTHOR = "nightshift";                /* the name new saves are signed with */
+  const libraryName = (id) => (LIBRARIES.find((l) => l.id === id) || {}).name || "";
+
+  const P = (id, name, library, category, genre, subgenre, author, created, rating, tags, description) =>
+    ({ id, name, library, category, genre, subgenre, author, created, rating, tags, description });
+  const F = "lib-factory", U = "lib-user", MS = "Mote Sound";
+  const presets = [
+    P("p-f01", "Dust in the Beam", F, "Pad", "Ambient", "Drone", MS, "2026-02-03", 5, ["Warm", "Evolving", "Wide", "Airy"],
+      "A slow unison pad that thickens as Filter Env A1 opens. Hold a chord and let the motes gather."),
+    P("p-f02", "Lantern Bass", F, "Bass", "House", "Deep House", MS, "2026-02-05", 4, ["Warm", "Mono", "Sub"],
+      "A round bass with a short filter pluck on every note. Mode is Mono with a little Portamento."),
+    P("p-f03", "Glass Tide", F, "Keys", "Pop", "Dream Pop", MS, "2026-02-11", 4, ["Bell", "Glassy", "Bright"],
+      "Bell-like keys. The second filter runs in parallel and keeps the top shimmering."),
+    P("p-f04", "Kite String", F, "Lead", "Synthwave", "Outrun", MS, "2026-02-14", 3, ["Bright", "Mono", "Glide"],
+      "A thin, singing lead. LFO A adds a slow vibrato after the note settles."),
+    P("p-f05", "Ninth Orbit", F, "Pad", "Cinematic", "Score", MS, "2026-02-20", null, ["Dark", "Evolving", "Slow", "Wide"],
+      "Chains A and B drift against each other while LFO B moves Cutoff over several bars."),
+    P("p-f06", "Night Ferry", F, "Arp", "Techno", "Melodic Techno", MS, "2026-03-02", 4, ["Rhythmic", "Dark"],
+      "Tempo-synced filter motion made for arpeggiated lines."),
+    P("p-f07", "Copper Thread", F, "Pluck", "House", "Tech House", MS, "2026-03-04", 3, ["Bright", "Rhythmic"],
+      "A short pluck with Drive on the first filter."),
+    P("p-f08", "Moss Sub", F, "Bass", "Hip-Hop", "Lo-fi", MS, "2026-03-09", 4, ["Sub", "Mono", "Warm", "Soft"],
+      "Pure low end with a slow amp attack. Sits under a sampled loop."),
+    P("p-f09", "Low Cloud", F, "Pad", "Ambient", "Drone", MS, "2026-03-15", null, ["Soft", "Airy", "Slow"], ""),
+    P("p-f10", "Pollen Specks", F, "Texture", "Experimental", "Glitch", MS, "2026-03-21", 2, ["Airy", "Detuned"],
+      "Thin, detuned specks. Best high on the keyboard."),
+    P("p-f11", "Harbor Lamp", F, "Keys", "Pop", "Synth-pop", MS, "2026-04-01", 3, ["Warm", "Bell"],
+      "Soft electric keys with a gentle stereo spread."),
+    P("p-f12", "Static Bloom", F, "FX", "Experimental", "Noise", MS, "2026-04-07", null, ["Gritty", "Evolving"],
+      "A swelling texture for transitions. Ride Master Volume."),
+    P("p-f13", "Frost on Wire", F, "Bell", "Cinematic", "Score", MS, "2026-04-12", 4, ["Bell", "Glassy", "Soft"],
+      "A cold bell with a long release."),
+    P("p-f14", "Ember Stack", F, "Lead", "Trance", "Progressive", MS, "2026-04-18", 5, ["Stacked", "Bright", "Wide", "Detuned"],
+      "Stacked saws on all four chains, spread wide but centred."),
+    P("p-f15", "Tin Rain", F, "Pluck", "Electronica", "IDM", MS, "2026-04-25", null, ["Bright", "Rhythmic"], ""),
+    P("p-f16", "Paper Choir", F, "Pad", "", "", "", "", null, ["Airy", "Soft"], ""),
+    P("p-f17", "Rust Engine", F, "Bass", "Drum & Bass", "Neurofunk", MS, "2026-05-03", 3, ["Gritty", "Mono", "Dark"],
+      "Two filters in series with heavy Drive. Mod Env A moves Resonance."),
+    P("p-f18", "Moth Wing", F, "Lead", "Downtempo", "Trip-Hop", MS, "2026-05-10", 2, ["Soft", "Glide"],
+      "A breathy lead that glides between notes."),
+    P("p-f19", "Deep Field Hum", F, "Drone", "Ambient", "Dark Ambient", MS, "2026-05-22", 4, ["Dark", "Slow", "Evolving"],
+      "One low note can carry a whole scene."),
+    P("p-f20", "Lamplit Keys", F, "Keys", "Jazz", "Neo-Soul", MS, "2026-06-02", 0, ["Warm", "Soft"],
+      "Mellow keys with a slight detune."),
+    P("p-u01", "Glass Tide", U, "Keys", "", "", USER_AUTHOR, "2026-10-02", null, ["Bell", "Soft"],
+      "My softer take: less Drive and a longer Release."),
+    P("p-u02", "Sunday Bass", U, "Bass", "House", "Garage", USER_AUTHOR, "2026-10-05", 4, ["Warm", "Mono"], ""),
+    P("p-u03", "Rainy Window", U, "Keys", "Hip-Hop", "Lo-fi", USER_AUTHOR, "2026-10-09", 3, ["Soft", "Warm"],
+      "For late sketches. Mono Legato on."),
+    P("p-u04", "Test 3", U, "", "", "", USER_AUTHOR, "2026-10-21", null, [], ""),
+    P("p-u05", "Lantern Bass", U, "Bass", "House", "Deep House", USER_AUTHOR, "2026-10-24", 5, ["Sub", "Warm"],
+      "The factory Lantern Bass with more Drive and a shorter Decay."),
+    P("p-u06", "Blue Hour Arp", U, "Arp", "Synthwave", "Darkwave", USER_AUTHOR, "2026-11-02", 4, ["Rhythmic", "Glide"],
+      "A slow arp. Tempo and Retrigger are on."),
+    P("p-u07", "Wide Open", U, "Pad", "Ambient", "Drone", USER_AUTHOR, "2026-11-08", null, ["Wide", "Airy", "Evolving"], ""),
+  ];
+
+  /* ---------- Finding and ordering ---------- */
+  const state = { query: "", tags: new Set(), sort: "name", selected: "p-f01", rating: null };
+  const blank = (v) => v === null || v === undefined || v === "";
+  const text = (a, b) => a.localeCompare(b, "en", { sensitivity: "base", numeric: true });
+  const blanksLast = (a, b, cmp) => (blank(a) ? (blank(b) ? 0 : 1) : blank(b) ? -1 : cmp(a, b));
+  const byName = (a, b) =>
+    text(a.name, b.name) || text(libraryName(a.library), libraryName(b.library)) ||
+    blanksLast(a.created, b.created, (x, y) => text(y, x));
+  const SORTS = {
+    name: byName,                                                                           /* A to Z */
+    category: (a, b) => blanksLast(a.category, b.category, text) || byName(a, b),         /* A to Z */
+    created: (a, b) => blanksLast(a.created, b.created, (x, y) => text(y, x)) || byName(a, b), /* newest first */
+    rating: (a, b) => blanksLast(a.rating, b.rating, (x, y) => y - x) || byName(a, b),    /* 5 first, unrated last */
+    author: (a, b) => blanksLast(a.author, b.author, text) || byName(a, b),               /* A to Z */
+  };
+  /* A row shows when its name contains the search text and it has every chosen tag. */
+  const shown = () => {
+    const q = state.query.trim().toLocaleLowerCase("en");
+    const need = [...state.tags];
+    return presets
+      .filter((p) => (!q || p.name.toLocaleLowerCase("en").includes(q)) && need.every((t) => p.tags.includes(t)))
+      .sort(SORTS[state.sort]);
+  };
+  const allTags = () => [...new Set(presets.flatMap((p) => p.tags))].sort(text);
+
+  /* ---------- Drawing ---------- */
+  const el = {
+    rows: $("rows"), none: $("none"), count: $("count"), chips: $("chips"), clearTags: $("clear-tags"),
+    search: $("search"), detail: $("detail"), saver: $("saver"), status: $("status"),
+    name: $("d-name"), nameView: $("name-view"), renameForm: $("rename-form"), renameInput: $("rename-input"),
+    renameErr: $("rename-err"), renameOpen: $("rename-open"), rating: $("d-rating"), tags: $("d-tags"), desc: $("d-desc"),
+    foot: $("detail-foot"),
+  };
+  const make = (tag, cls, txt) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (txt !== undefined) n.textContent = txt;
+    return n;
+  };
+  const cell = (cls, value) => {
+    const n = make("span", cls);
+    if (blank(value)) { n.classList.add("empty"); n.textContent = "—"; }
+    else { n.textContent = value; n.title = value; }
+    return n;
+  };
+  const motes = (rating) => {
+    const n = make("span", "rt");
+    if (blank(rating)) {
+      n.classList.add("empty");
+      n.textContent = "—";
+      n.title = "Unrated";
+      n.setAttribute("aria-label", "Unrated");
+      return n;
+    }
+    n.setAttribute("role", "img");
+    n.setAttribute("aria-label", `Rated ${rating} of 5`);
+    n.title = `Rated ${rating} of 5`;
+    for (let i = 1; i <= 5; i++) n.append(make("i", i <= rating ? "f" : ""));
+    return n;
+  };
+
+  const drawChips = () => {
+    el.chips.replaceChildren(...allTags().map((t) => {
+      const b = make("button", "chip", t);
+      b.type = "button";
+      b.dataset.tag = t;
+      b.setAttribute("aria-pressed", String(state.tags.has(t)));
+      return b;
+    }));
+    el.clearTags.hidden = state.tags.size === 0;
+  };
+
+  const drawList = () => {
+    const list = shown();
+    el.rows.replaceChildren(...list.map((p) => {
+      const row = make("div", "row cols");
+      row.id = "opt-" + p.id;
+      row.dataset.id = p.id;
+      row.setAttribute("role", "option");
+      row.setAttribute("aria-selected", String(p.id === state.selected));
+      const meta = make("span", "meta");
+      meta.append(cell("cat", p.category), cell("lib", libraryName(p.library)), cell("au", p.author), cell("dt", p.created));
+      row.append(cell("nm", p.name), meta, motes(p.rating));
+      return row;
+    }));
+    const total = presets.length;
+    el.count.textContent = list.length === total ? `${total} presets` : `${list.length} of ${total}`;
+    el.rows.hidden = list.length === 0;
+    el.none.hidden = list.length > 0;
+    if (!list.length) {
+      const q = state.query.trim(), byTags = state.tags.size > 0;
+      $("none-text").textContent = q && byTags
+        ? `No preset name contains “${q}” and has every chosen tag.`
+        : q ? `No preset name contains “${q}”.` : "No preset has every chosen tag.";
+      $("clear-all").textContent = q && byTags ? "Clear search and tags" : q ? "Clear search" : "Clear tags";
+    }
+    if (list.some((p) => p.id === state.selected)) el.rows.setAttribute("aria-activedescendant", "opt-" + state.selected);
+    else el.rows.removeAttribute("aria-activedescendant");
+    for (const h of document.querySelectorAll(".thead [data-key]")) h.classList.toggle("on", h.dataset.key === state.sort);
+  };
+
+  const put = (id, value) => {
+    const n = $(id);
+    n.textContent = blank(value) ? "—" : value;
+  };
+  const drawDetail = () => {
+    const p = presets.find((x) => x.id === state.selected);
+    if (!p) return;
+    el.name.textContent = p.name;
+    if (blank(p.rating)) el.rating.replaceChildren(make("span", "", "Unrated"));
+    else {
+      const m = motes(p.rating);
+      m.removeAttribute("role");
+      m.removeAttribute("aria-label");
+      el.rating.replaceChildren(m, make("span", "", `Rated ${p.rating} of 5`));
+    }
+    put("d-category", p.category);
+    put("d-library", libraryName(p.library));
+    put("d-genre", p.genre);
+    put("d-subgenre", p.subgenre);
+    put("d-author", p.author);
+    put("d-created", p.created);
+    el.tags.replaceChildren(...(p.tags.length ? p.tags.map((t) => make("span", "chip", t)) : [make("span", "", "—")]));
+    el.desc.textContent = blank(p.description) ? "—" : p.description;
+  };
+
+  const say = (msg) => {
+    el.status.textContent = "";
+    requestAnimationFrame(() => { el.status.textContent = msg; });
+  };
+
+  /* ---------- Select ---------- */
+  const select = (id) => {
+    if (id === state.selected) return;
+    closeRename();
+    state.selected = id;
+    for (const row of el.rows.children) row.setAttribute("aria-selected", String(row.dataset.id === id));
+    if ($("opt-" + id)) {
+      el.rows.setAttribute("aria-activedescendant", "opt-" + id);
+      $("opt-" + id).scrollIntoView({ block: "nearest" });
+    }
+    el.status.textContent = "";
+    drawDetail();
+  };
+  el.rows.addEventListener("click", (e) => {
+    const row = e.target.closest(".row");
+    if (row) select(row.dataset.id);
+  });
+  el.rows.addEventListener("keydown", (e) => {
+    const rows = [...el.rows.children];
+    if (!rows.length) return;
+    const at = rows.findIndex((r) => r.dataset.id === state.selected);
+    let next = -1;
+    if (e.key === "ArrowDown") next = at < 0 ? 0 : Math.min(rows.length - 1, at + 1);
+    else if (e.key === "ArrowUp") next = at < 0 ? 0 : Math.max(0, at - 1);
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = rows.length - 1;
+    if (next < 0) return;
+    e.preventDefault();
+    select(rows[next].dataset.id);
+  });
+
+  /* ---------- Search, tags, sort ---------- */
+  el.search.addEventListener("input", () => { state.query = el.search.value; drawList(); });
+  el.search.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && el.search.value) { el.search.value = ""; state.query = ""; drawList(); }
+  });
+  el.chips.addEventListener("click", (e) => {
+    const chip = e.target.closest(".chip");
+    if (!chip) return;
+    const t = chip.dataset.tag;
+    if (state.tags.has(t)) state.tags.delete(t); else state.tags.add(t);
+    chip.setAttribute("aria-pressed", String(state.tags.has(t)));
+    el.clearTags.hidden = state.tags.size === 0;
+    drawList();
+  });
+  el.clearTags.addEventListener("click", () => { state.tags.clear(); drawChips(); drawList(); });
+  $("clear-all").addEventListener("click", () => {
+    state.tags.clear();
+    state.query = "";
+    el.search.value = "";
+    drawChips();
+    drawList();
+    el.search.focus();
+  });
+  document.querySelector(".sort").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-sort]");
+    if (!b) return;
+    state.sort = b.dataset.sort;
+    for (const x of document.querySelectorAll(".sort [data-sort]")) x.setAttribute("aria-pressed", String(x === b));
+    drawList();
+  });
+
+  /* ---------- Rename (this page only) ---------- */
+  const openRename = () => {
+    const p = presets.find((x) => x.id === state.selected);
+    el.nameView.hidden = true;
+    el.foot.hidden = true;
+    el.renameForm.hidden = false;
+    el.renameErr.hidden = true;
+    el.renameInput.removeAttribute("aria-invalid");
+    el.renameInput.value = p.name;
+    el.renameInput.focus();
+    el.renameInput.select();
+    relayout();
+  };
+  function closeRename(restoreFocus) {
+    if (el.renameForm.hidden) return;
+    el.renameForm.hidden = true;
+    el.nameView.hidden = false;
+    el.foot.hidden = false;
+    if (restoreFocus) el.renameOpen.focus();
+    relayout();
+  }
+  el.renameOpen.addEventListener("click", openRename);
+  $("rename-cancel").addEventListener("click", () => closeRename(true));
+  el.renameInput.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); closeRename(true); } });
+  el.renameForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const name = el.renameInput.value.trim();
+    if (!name) {
+      el.renameErr.hidden = false;
+      el.renameInput.setAttribute("aria-invalid", "true");
+      el.renameInput.focus();
+      return;
+    }
+    presets.find((x) => x.id === state.selected).name = name;
+    closeRename(true);
+    drawList();
+    drawDetail();
+    say(`Renamed to “${name}”.`);
+  });
+
+  /* ---------- Save the current sound (this page only) ---------- */
+  const form = {
+    root: $("save-form"), name: $("s-name"), category: $("s-category"), genre: $("s-genre"),
+    subgenre: $("s-subgenre"), tags: $("s-tags"), desc: $("s-desc"), err: $("save-err"), rating: $("s-rating"),
+  };
+  const fillLists = () => {
+    const opts = (id, key) => $(id).replaceChildren(...[...new Set(presets.map((p) => p[key]).filter((v) => !blank(v)))]
+      .sort(text).map((v) => { const o = make("option"); o.value = v; return o; }));
+    opts("dl-category", "category");
+    opts("dl-genre", "genre");
+    opts("dl-subgenre", "subgenre");
+  };
+  const setRating = (value) => {
+    state.rating = value;
+    for (const b of form.rating.querySelectorAll("button")) {
+      b.setAttribute("aria-pressed", String(b.dataset.rating === (value === null ? "" : String(value))));
+    }
+  };
+  const openSave = () => {
+    closeRename();
+    form.root.reset();
+    form.err.hidden = true;
+    form.name.removeAttribute("aria-invalid");
+    setRating(null);
+    el.detail.hidden = true;
+    el.saver.hidden = false;
+    form.name.focus();
+    relayout();
+  };
+  const closeSave = () => {
+    el.saver.hidden = true;
+    el.detail.hidden = false;
+    $("save-open").focus();
+    relayout();
+  };
+  const today = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+  $("save-open").addEventListener("click", openSave);
+  $("save-cancel").addEventListener("click", closeSave);
+  form.rating.addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (b) setRating(b.dataset.rating === "" ? null : Number(b.dataset.rating));
+  });
+  el.saver.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); closeSave(); } });
+  form.root.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const name = form.name.value.trim();
+    if (!name) {
+      form.err.hidden = false;
+      form.name.setAttribute("aria-invalid", "true");
+      form.name.focus();
+      return;
+    }
+    const tags = [...new Set(form.tags.value.split(",").map((t) => t.trim()).filter(Boolean))];
+    const preset = P(
+      "p-" + Date.now().toString(36), name, USER_LIBRARY,
+      form.category.value.trim(), form.genre.value.trim(), form.subgenre.value.trim(),
+      USER_AUTHOR, today(), state.rating, tags, form.desc.value.trim(),
+    );
+    presets.push(preset);
+    state.selected = preset.id;
+    fillLists();
+    drawChips();
+    drawList();
+    drawDetail();
+    closeSave();
+    $("opt-" + preset.id)?.scrollIntoView({ block: "nearest" });
+    say(`Saved “${name}” to ${libraryName(USER_LIBRARY)}.`);
+  });
+
+  /* ---------- The sky: mist, a drifting light the panels break into shafts, and motes ---------- */
+  const root = document.documentElement;
+  const screen = document.querySelector(".screen");
+  const lit = [screen, ...document.querySelectorAll(".panel")];
+  const canvas = $("sky");
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  let vw = innerWidth, vh = innerHeight;
+  let art = screen.getBoundingClientRect();
+  let boxes = [];
+  let occDirty = true;
+
+  const measure = () => {
+    vw = innerWidth;
+    vh = innerHeight;
+    art = screen.getBoundingClientRect();
+    boxes = lit.flatMap((n) => {
+      if (n !== screen && n.offsetParent === null) return [];
+      const r = n.getBoundingClientRect();
+      return [{ el: n, r, cx: r.left + r.width / 2, cy: r.top + r.height / 2 }];
+    });
+    occDirty = true;
+  };
+
+  /* One soft light hangs in the strip above the first panels and drifts (~96 s across, ~61 s bob).
+     It also leans toward the pointer, easing about a second behind it. */
+  let pointerX = null, lightX = null;
+  if (!still) {
+    addEventListener("pointermove", (e) => { pointerX = e.clientX; }, { passive: true });
+    document.addEventListener("pointerout", (e) => { if (!e.relatedTarget) pointerX = null; });
+  }
+  const lightAt = (t) => {
+    let x = art.left + art.width * (0.4 + 0.18 * Math.sin(t * 0.0654));
+    if (pointerX !== null) x += (Math.min(Math.max(pointerX, art.left), art.right) - x) * 0.45;
+    lightX = lightX === null || still ? x : lightX + (x - lightX) * 0.04;
+    return [lightX, Math.max(art.top + 3 + 9 * Math.sin(t * 0.103 + 1.3), -vh * 0.08)];
+  };
+
+  const rims = (lx, ly) => {
+    for (const b of boxes) {
+      const deg = Math.atan2(lx - b.cx, b.cy - ly) * (180 / Math.PI);
+      const k = Math.min(1, Math.max(0, 1.3 - Math.hypot(lx - b.cx, ly - b.cy) / 820));
+      b.el.style.setProperty("--rim", deg.toFixed(1) + "deg");
+      b.el.style.setProperty("--lit", k.toFixed(2));
+    }
+  };
+
+  const sky = makeSky();
+  if (!sky) root.classList.add("no-gl");
+
+  let raf = 0, last = -1e9, tick = 0;
+  const t0 = performance.now();
+  const paint = (sec) => {
+    const t = sec + 40;
+    const [lx, ly] = lightAt(t);
+    if (sky) {
+      if (occDirty) { sky.occlusion(); occDirty = false; }
+      sky.draw(t, lx, ly);
+    }
+    if (still || tick++ % 3 === 0) rims(lx, ly);
+  };
+  const frame = (now) => {
+    raf = requestAnimationFrame(frame);
+    if (now - last < 32) return;          /* about 30 fps is plenty for slow light */
+    last = now;
+    paint((now - t0) / 1000);
+  };
+
+  let queued = false;
+  function relayout() {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => {
+      queued = false;
+      measure();
+      if (sky) sky.resize();
+      if (still) paint(0);
+    });
+  }
+
+  /* ---------- First draw ---------- */
+  fillLists();
+  drawChips();
+  drawList();
+  drawDetail();
+
+  measure();
+  if (sky) sky.resize();
+  addEventListener("resize", relayout);
+  addEventListener("scroll", relayout, { passive: true });
+  if ("ResizeObserver" in window) new ResizeObserver(relayout).observe(screen);
+  if (document.fonts) document.fonts.ready.then(relayout);
+  paint(0);                               /* first frame now, so the page opens complete */
+  if (!still) raf = requestAnimationFrame(frame);
+
+  function makeSky() {
+    const opts = { alpha: false, antialias: false, depth: false, stencil: false, powerPreference: "low-power" };
+    let gl = null;
+    try { gl = canvas.getContext("webgl2", opts) || canvas.getContext("webgl", opts); } catch (e) { gl = null; }
+    if (!gl) return null;
+
+    const VERT = "attribute vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }";
+    const FRAG = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+uniform vec2 uRes;       // drawing buffer, px
+uniform float uTime;     // seconds
+uniform vec2 uLight;     // light position, 0..1 with y up
+uniform vec2 uView;      // viewport, CSS px
+uniform sampler2D uOcc;  // where the panels are: 1 inside, 0 outside
+
+const vec3 NAVY = vec3(15.0, 24.0, 57.0) / 255.0;
+const vec3 INK  = vec3(241.0, 241.0, 241.0) / 255.0;
+const vec3 LINE = vec3(164.0, 182.0, 183.0) / 255.0;
+const vec3 ON   = vec3(159.0, 197.0, 233.0) / 255.0;
+
+float hash12(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+vec2 hash22(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.xx + p3.yz) * p3.zy);
+}
+float vnoise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  float a = hash12(i), b = hash12(i + vec2(1.0, 0.0));
+  float c = hash12(i + vec2(0.0, 1.0)), d = hash12(i + vec2(1.0, 1.0));
+  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+float fbm(vec2 p) {
+  float v = 0.0, a = 0.5;
+  mat2 m = mat2(1.6, 1.2, -1.2, 1.6);
+  for (int i = 0; i < 5; i++) { v += a * vnoise(p); p = m * p; a *= 0.5; }
+  return v;
+}
+float occAt(vec2 uv) { return texture2D(uOcc, uv).r; }
+float glow(vec2 uv) {
+  vec2 d = (uv - uLight) * uView / uView.y;
+  return exp(-dot(d, d) * 3.2);
+}
+float motes(vec2 uv, float cells, float rad, float soft, float rise, float keep, float seed, float t) {
+  vec2 p = uv * uView / uView.y * cells;
+  p += vec2(sin(t * 0.023 + seed) * 1.7, -t * rise * cells);
+  vec2 id = floor(p), f = fract(p);
+  float acc = 0.0;
+  for (int j = -1; j <= 1; j++) {
+    for (int i = -1; i <= 1; i++) {
+      vec2 g = vec2(float(i), float(j));
+      vec2 c = id + g;
+      vec2 h = hash22(c + seed);
+      if (h.x < keep) {
+        vec2 o = g + 0.5 + (hash22(c + seed + 7.31) - 0.5) * 0.76
+               + 0.16 * vec2(sin(t * (0.19 + h.y * 0.23) + h.y * 41.0), cos(t * (0.15 + h.x * 0.2) + h.x * 37.0));
+        float d = length(f - o);
+        float tw = 0.55 + 0.45 * sin(t * (0.3 + h.y * 0.7) + h.x * 61.0);
+        acc += tw * (1.0 - smoothstep(rad * soft, rad, d));
+      }
+    }
+  }
+  return acc;
+}
+// thin veins of light, like light through moving water
+float veins(vec2 p, float t) {
+  vec2 w = vec2(fbm(p * 1.3 - t * 0.02), fbm(p * 1.3 + 4.1 + t * 0.015));
+  float n = fbm(p + vec2(t * 0.03, -t * 0.02) + 0.6 * w);
+  float r = 1.0 - abs(2.0 * n - 1.0);
+  return pow(r, 7.0);
+}
+
+void main() {
+  vec2 uv = gl_FragCoord.xy / uRes;
+  vec2 asp = uView / uView.y;
+  float t = uTime;
+
+  // mist: slow, folded noise
+  vec2 hp = uv * asp * 1.7;
+  vec2 q = vec2(fbm(hp + vec2(0.0, t * 0.011)), fbm(hp + vec2(5.2, 1.3) - t * 0.009));
+  float mist = fbm(hp + 1.7 * q + vec2(t * 0.005, -t * 0.007));
+
+  // shafts: march toward the light; panels block it
+  vec2 toL = uLight - uv;
+  vec2 stp = toL * (0.92 / 28.0);
+  vec2 s = uv + stp * hash12(gl_FragCoord.xy);
+  float shaft = 0.0, w = 1.0;
+  for (int i = 0; i < 28; i++) {
+    shaft += glow(s) * (1.0 - occAt(s)) * w;
+    w *= 0.962;
+    s += stp;
+  }
+  float breathe = 0.9 + 0.1 * sin(t * 0.21);
+  shaft *= breathe / 28.0;
+
+  float here = occAt(uv);
+  float g = glow(uv) * breathe;
+
+  // halo: an edge that faces the light catches it
+  float ring = 0.0;
+  for (int i = 0; i < 8; i++) {
+    float a = float(i) * 0.785398 + 0.39;
+    vec2 o = vec2(cos(a), sin(a)) / uView;
+    ring += occAt(uv + o * 6.0) * 0.55 + occAt(uv + o * 15.0) * 0.45;
+  }
+  ring /= 8.0;
+  vec2 dirL = normalize(toL * uView + 1e-4);
+  float behind = occAt(uv - dirL * 12.0 / uView);
+  float halo = ring * (1.0 - here) * (0.15 + 0.85 * behind) * (0.25 + 1.6 * g);
+
+  // motes: far specks, nearer specks, a few out-of-focus discs
+  float m = motes(uv, 62.0, 0.11, 0.25, 0.0042, 0.16, 3.1, t) * 0.8
+          + motes(uv, 28.0, 0.09, 0.3, 0.0068, 0.22, 11.7, t) * 1.1
+          + motes(uv, 10.0, 0.2, 0.0, 0.0105, 0.2, 23.9, t) * 0.2;
+  float catchLight = 0.2 + shaft * 4.5 + g * 0.9;
+
+  vec3 col = NAVY;
+  col = mix(col, mix(LINE, ON, 0.7), smoothstep(0.3, 0.95, mist) * 0.24 + g * 0.12);
+  col += ON * (shaft * 0.62 + g * 0.05);
+  col += INK * shaft * shaft * 0.95;
+  col += mix(ON, INK, 0.4) * veins(uv * asp * 3.2, t) * (g * 0.55 + shaft * 1.6) * 0.42;
+  col += mix(ON, INK, 0.3) * halo * 0.45;
+  col += mix(ON, INK, 0.65) * m * catchLight * (1.0 - here);
+
+  vec2 vv = (uv - 0.5) * asp;
+  col *= 1.0 - 0.34 * smoothstep(0.45, 1.25, length(vv));
+  col = pow(min(col, vec3(0.86)), vec3(1.06));
+  col += (hash12(gl_FragCoord.xy + fract(t * 7.0) * 113.0) - 0.5) / 255.0;
+  gl_FragColor = vec4(col, 1.0);
+}`;
+
+    const compile = (type, src) => {
+      const sh = gl.createShader(type);
+      gl.shaderSource(sh, src);
+      gl.compileShader(sh);
+      if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) { console.warn(gl.getShaderInfoLog(sh)); return null; }
+      return sh;
+    };
+    const vs = compile(gl.VERTEX_SHADER, VERT);
+    const fs = compile(gl.FRAGMENT_SHADER, FRAG);
+    if (!vs || !fs) return null;
+    const prog = gl.createProgram();
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.bindAttribLocation(prog, 0, "p");
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { console.warn(gl.getProgramInfoLog(prog)); return null; }
+    gl.useProgram(prog);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+    const U = {};
+    for (const n of ["uRes", "uTime", "uLight", "uView", "uOcc"]) U[n] = gl.getUniformLocation(prog, n);
+
+    const tex = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.uniform1i(U.uOcc, 0);
+
+    /* panel mask at a quarter of the viewport size */
+    const occ = document.createElement("canvas");
+    const octx = occ.getContext("2d");
+    let shownOnce = false;
+
+    canvas.addEventListener("webglcontextlost", (e) => {
+      e.preventDefault();
+      cancelAnimationFrame(raf);
+      canvas.classList.remove("on");
+      root.classList.add("no-gl");
+    });
+
+    return {
+      resize() {
+        /* soft light needs few pixels: about 0.6 of the screen, at most ~1.2 megapixels */
+        const s = Math.min(Math.min(window.devicePixelRatio || 1, 2) * 0.62, Math.sqrt(1.2e6 / (vw * vh)));
+        const w = Math.max(2, Math.round(vw * s)), h = Math.max(2, Math.round(vh * s));
+        if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+        gl.viewport(0, 0, w, h);
+      },
+      occlusion() {
+        const q = 4;
+        const w = Math.max(2, Math.ceil(vw / q)), h = Math.max(2, Math.ceil(vh / q));
+        if (occ.width !== w || occ.height !== h) { occ.width = w; occ.height = h; }
+        octx.fillStyle = "#000";
+        octx.fillRect(0, 0, w, h);
+        octx.fillStyle = "#fff";
+        for (const b of boxes) {
+          if (b.el === screen) continue;
+          const r = b.r;
+          if (r.bottom < 0 || r.top > vh || r.right < 0 || r.left > vw) continue;
+          octx.beginPath();
+          if (octx.roundRect) octx.roundRect(r.left / q, r.top / q, r.width / q, r.height / q, 7 / q);
+          else octx.rect(r.left / q, r.top / q, r.width / q, r.height / q);
+          octx.fill();
+        }
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, occ);
+      },
+      draw(t, lx, ly) {
+        gl.uniform2f(U.uRes, canvas.width, canvas.height);
+        gl.uniform1f(U.uTime, t);
+        gl.uniform2f(U.uLight, lx / vw, 1 - ly / vh);
+        gl.uniform2f(U.uView, vw, vh);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        if (!shownOnce) { shownOnce = true; canvas.classList.add("on"); }
+      },
+    };
+  }
+})();
+</script>
+</body>
+</html>

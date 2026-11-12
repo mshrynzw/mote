@@ -2,12 +2,12 @@
 
 Windows 11 向けのウェーブテーブル・シンセサイザーです。DAW に読み込ませる形式は VST3 です。
 
-軽い動作を仕様にします。エンジンの上限は同時発音 128、Unison 16 です。
-日常の目安として、16 音、Oscillator 4 基、Unison 8 でも 48 kHz で CPU のコアを占有しきらないことを目標にします。
+軽い動作を仕様にします。MIDI ノートは最大 16、Unison は最大 16 です。
+日常の目安として、Polyphony 16、Oscillator 4 基、Unison 8 でも 48 kHz で CPU のコアを占有しきらないことを目標にします。
 
 ## いまの段階
 
-Phase 1 は、MIDI でサイン波が鳴る VST3 だけです。同時に鳴る音は 1 つで、あとから押したノートが優先されます。独自の画面、Unison、フィルター、エンベロープはありません。音量は固定です。
+Phase 2 の途中です。オシレーターは 4 基で、Classic（サイン、三角、ノコギリ、パルス）と Unison が鳴ります。初期状態でオンなのは 1 基目だけです。Polyphony の初期値は 4 で、Mode の初期値は Poly です。Amp Env と Filter Env が鳴り、各オシレーターは自分のフィルターを 1 基通る。各列の 2 基目は仕様だけ決まり、音にはまだ入っていない。Master では音量、移調、ベンド、Mono、Legato、Portamento を扱います。Mod Env と LFO は Target と Chain で、音程、音量、定位、Cutoff、Resonance、Amp に割り当てられる。初期値は Off なので、選ぶまで音は変わらない。Stacked Saw、Wavetable、独自の画面はまだない。
 
 ## ビルド
 

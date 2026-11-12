@@ -1,7 +1,7 @@
 //! Mote のプラグイン入口。
 //!
 //! `lib.rs` はライブラリのルートで、DAW が最初に読み込むファイルになる。
-//! 音の計算は `sine.rs` にあり、ここでは MIDI を受け取って左右のOutputへ書き込む。
+//! 音の計算は `voice.rs` と `oscillator.rs` にあり、ここでは MIDI を受け取って左右の Output へ書き込む。
 
 // `prelude` は、プラグインを書くときによく使う型やマクロをまとめて読み込む。
 use nice_plug::prelude::*;
@@ -10,37 +10,47 @@ use std::num::NonZeroU32;
 // `Arc` は複数の場所から同じ値を共有するポインタ。パラメータをホストとプラグインで共有する。
 use std::sync::Arc;
 
-// 同じディレクトリの `sine.rs` を、このライブラリの一部として読み込む。
-mod sine;
+mod assign;
+mod envelope;
+mod filter;
+mod filter_env;
+mod lfo;
+mod master;
+mod mod_env;
+mod oscillator;
+mod params;
+mod unison;
+mod voice;
+mod wavetable;
 
-use sine::SineVoice;
+use params::MoteParams;
+use voice::Voices;
 
 /// DAW に見えるプラグイン本体。
 ///
 /// `pub` は他のクレートからも見える、という意味。書き出しマクロがこの型を必要とする。
 pub struct Mote {
-    /// ホストへ渡すパラメータ一覧。Phase 1 では中身は空。
+    /// ホストへ渡すパラメータ一覧。オシレーター 4 基分のノブ。
     params: Arc<MoteParams>,
-    /// いま鳴っている 1 音。
-    voice: SineVoice,
+    /// 最大 16 ノート。鳴っていないスロットは計算しない。
+    voices: Voices,
 }
-
-/// ノブなどのパラメータ。
-///
-/// `#[derive(Default, Params)]` は、決まったメソッドをコンパイラに書かせる印。
-/// `Default` は初期値、`Params` は nice-plug がパラメータとして認識するためのもの。
-/// フィールドが無いので、DAW 上にノブは出ない。
-#[derive(Default, Params)]
-struct MoteParams {}
 
 // `Default` を実装すると `Mote::default()` で初期状態を作れる。
 // ホストはプラグインを読み込むとき、このメソッドでインスタンスを作る。
 impl Default for Mote {
     fn default() -> Self {
+        // `Arc::new` で共有用のポインタにする。中身のコピーはまだ発生しない。
+        // そのあとで Sync のコピー先を結ぶ。結ぶ前は、4 基の住所がまだ決まらない。
+        let params = Arc::new(MoteParams::default());
+        params.bind_amp_sync();
+        params.bind_filter_sync();
+        params.bind_filter_env_sync();
+        params.bind_mod_env_sync();
+        params.bind_lfo_sync();
         Self {
-            // `Arc::new` で共有用のポインタにする。中身のコピーはまだ発生しない。
-            params: Arc::new(MoteParams::default()),
-            voice: SineVoice::new(),
+            params,
+            voices: Voices::new(),
         }
     }
 }
@@ -56,15 +66,29 @@ impl Mote {
                 // キー番号が無いイベント（どのキーでもよい、という指定）は無視する。
                 // `if let Some(note)` は、値があるときだけ中に入る。
                 if let Some(note) = key.number() {
-                    self.voice.note_on(note, velocity);
+                    self.voices.note_on(
+                        note,
+                        velocity,
+                        &self.params.oscillators(),
+                        &self.params.lfos(),
+                        &self.params.master,
+                    );
                 }
             }
-            // `|` は「この形でも、あの形でも」。ノートオフと、音を即座に切る Choke を同じ扱いにする。
-            // `key.number()` が None のときは、鳴っている音をすべて止める。
+            // `|` は「この形でも、あの形でも」。どちらも Release に入る。
+            // `key.number()` が None のときは、鳴っている音をすべて Release にする。
             NoteEvent::NoteOff { key, .. } | NoteEvent::Choke { key, .. } => {
-                self.voice.note_off(key.number());
+                self.voices.note_off(
+                    key.number(),
+                    &self.params.master,
+                    &self.params.oscillators(),
+                    &self.params.lfos(),
+                );
             }
-            // ピッチベンドなどは Phase 1 では無視する。
+            // `value` の 0.5 が中央。上下は Bend Range の半音数まで。
+            NoteEvent::MidiPitchBend { value, .. } => {
+                self.voices.set_bend(value);
+            }
             _ => {}
         }
     }
@@ -89,8 +113,8 @@ impl Plugin for Mote {
         ..AudioIOLayout::const_default()
     }];
 
-    // ノートオンとノートオフを受け取る。コントロールチェンジは Phase 1 では受け取らない。
-    const MIDI_INPUT: MidiConfig = MidiConfig::Basic;
+    // ノートとピッチベンドを受け取る。VST3 ではベンドを届けるために CC も含む。
+    const MIDI_INPUT: MidiConfig = MidiConfig::MidiCCs;
     // バッファの途中にある MIDI も、そのサンプル位置で処理する。
     const SAMPLE_ACCURATE_AUTOMATION: bool = true;
 
@@ -115,14 +139,14 @@ impl Plugin for Mote {
         buffer_config: &BufferConfig,
         _context: &mut impl ActivateContext<Self>,
     ) -> bool {
-        self.voice.set_sample_rate(buffer_config.sample_rate);
+        self.voices.set_sample_rate(buffer_config.sample_rate);
         // false を返すと、プラグインの起動失敗になる。
         true
     }
 
     /// 再生位置のリセット。オーディオ処理の途中でも呼ばれることがあるので、確保はしない。
     fn reset(&mut self) {
-        self.voice.reset();
+        self.voices.reset();
     }
 
     /// 数十〜数百サンプルずつ繰り返し呼ばれる、音の本体。
@@ -135,6 +159,9 @@ impl Plugin for Mote {
     ) -> ProcessStatus {
         // このバッファ内の、次に処理する MIDI。まだ無ければ None。
         let mut next_event = context.next_event();
+        let transport = context.transport();
+        self.voices
+            .set_transport(transport.tempo, transport.time_sig_numerator);
 
         // `iter_samples` は「サンプル時刻ごとに、全チャンネル」を順に渡す。
         // `sample_id` はバッファ先頭からの番号。0 が最初のサンプル。
@@ -149,16 +176,30 @@ impl Plugin for Mote {
                 next_event = context.next_event();
             }
 
-            let sample = self.voice.next_sample();
-            // 左右に同じ値を書く。`*` は参照の先にあるサンプルを書き換える。
-            for channel_sample in channel_samples {
-                *channel_sample = sample;
+            let oscs = self.params.oscillators();
+            let filters = self.params.filters();
+            let filter_envs = self.params.filter_envelopes();
+            let mod_envs = self.params.mod_envelopes();
+            let lfos = self.params.lfos();
+            let amps = self.params.amp_envelopes();
+            let chain = voice::ChainParams {
+                oscs: &oscs,
+                filters: &filters,
+                filter_envs: &filter_envs,
+                mod_envs: &mod_envs,
+                lfos: &lfos,
+                amps: &amps,
+            };
+            let (left, right) = self.voices.next_sample(&chain, &self.params.master);
+            // 左右で値が違う。`enumerate` の 0 が左、1 が右。
+            for (channel, channel_sample) in channel_samples.into_iter().enumerate() {
+                *channel_sample = if channel == 0 { left } else { right };
             }
         }
 
         // 音が残っているあいだは、ホストに処理を続けてもらう。
         // 無音なら通常終了。次のノートオンは、そのときの process で受け取る。
-        if self.voice.is_sounding() {
+        if self.voices.is_sounding() {
             ProcessStatus::KeepAlive
         } else {
             ProcessStatus::Normal
@@ -169,7 +210,8 @@ impl Plugin for Mote {
 // CLAP 形式で書き出すときに必要な識別子。
 impl ClapPlugin for Mote {
     const CLAP_ID: &'static str = "com.mshrynzw.mote";
-    const CLAP_DESCRIPTION: Option<&'static str> = Some("A sine-wave instrument");
+    const CLAP_DESCRIPTION: Option<&'static str> =
+        Some("Classic oscillators with multimode filters");
     const CLAP_MANUAL_URL: Option<&'static str> = Some(Self::URL);
     const CLAP_SUPPORT_URL: Option<&'static str> = None;
     // 楽器であり、シンセであり、ステレオOutputである、とホストへ伝える。

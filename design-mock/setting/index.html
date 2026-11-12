@@ -1,0 +1,1085 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mote Setting Screen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600&family=Unbounded:wght@500&display=swap">
+<style>
+/* Layout: the same artboard, light and panels as Main and Preset.
+   Three panels in signal order: Oscillator, Filter, Envelope. Each knob is one row:
+   Min, Max and Initial fields, with a thin bar under Min and Max that marks where the
+   initial value sits in the range. Envelope splits Initial into Amp Env and
+   Filter Env, Mod Env, because Attack starts differently and Amount exists only there.
+   Narrower than the artboard, Envelope drops under the other two, then everything
+   stacks. Type and fields never shrink. Nothing is written to disk. */
+@property --rim { syntax: "<angle>"; inherits: true; initial-value: 330deg; }
+@property --lit { syntax: "<number>"; inherits: true; initial-value: .6; }
+
+:root {
+  --bg: rgba(15, 24, 57, 0.75);      /* panel plate, as on Main and Preset */
+  --navy: rgb(15 24 57);             /* text on a selected item */
+  --ink: rgb(241 241 241);           /* text */
+  --line: rgb(164 182 183);          /* frames and secondary lines */
+  --on: rgb(159 197 233);            /* selected fill, active values */
+
+  --font-ui: "Barlow Semi Condensed", "Arial Narrow", "Roboto Condensed", "Segoe UI", system-ui, sans-serif;
+  --font-mark: "Unbounded", "Barlow Semi Condensed", "Segoe UI", system-ui, sans-serif;
+
+  --cell: 70px;      /* one value field */
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--navy); scrollbar-gutter: stable; }
+body {
+  margin: 0;
+  padding-block: 24px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  /* still fallback for the sky */
+  background:
+    radial-gradient(110% 70% at 36% -14%, rgb(159 197 233 / .22), transparent 62%),
+    radial-gradient(70% 60% at 88% 112%, rgb(164 182 183 / .10), transparent 70%),
+    var(--navy);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: var(--on); color: var(--navy); }
+h1, h2, p { margin: 0; font-weight: inherit; }
+input { font: inherit; color: inherit; }
+
+/* ---------- Sky (the same light as Main) ---------- */
+#sky {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  visibility: hidden;       /* shown once the first frame is drawn */
+}
+#sky.on { visibility: visible; }
+
+/* ---------- Artboard ---------- */
+.stage { position: relative; z-index: 1; container: stage / inline-size; }
+.screen {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 340fr) minmax(0, 340fr) minmax(0, 448fr);
+  grid-template-areas: "lead lead brand" "osc filter env";
+  gap: 18px 15px;
+  max-width: 1188px;
+  margin: 0 auto;
+  padding: 15px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgb(15 24 57 / .16), rgb(15 24 57 / .44));
+}
+/* lit edge: brightest where the edge faces the light (--rim, set by the script) */
+.screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: conic-gradient(from calc(var(--rim) - 180deg),
+    rgb(164 182 183 / .44) 0deg,
+    rgb(164 182 183 / .62) 95deg,
+    rgb(159 197 233 / .95) 145deg,
+    var(--ink) 180deg,
+    rgb(159 197 233 / .95) 215deg,
+    rgb(164 182 183 / .62) 265deg,
+    rgb(164 182 183 / .44) 360deg);
+  -webkit-mask: linear-gradient(var(--navy) 0 0) content-box, linear-gradient(var(--navy) 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(var(--navy) 0 0) content-box exclude, linear-gradient(var(--navy) 0 0);
+  opacity: calc(.62 + .38 * var(--lit));
+}
+
+.brand {
+  grid-area: brand;
+  align-self: center;
+  justify-self: end;
+  padding: 3px 3px 0 0;
+  font: 500 24px/1 var(--font-mark);
+  letter-spacing: .02em;
+  color: var(--ink);
+  filter: drop-shadow(0 1px 3px rgb(15 24 57 / .95)) drop-shadow(0 0 16px rgb(15 24 57 / .7)) drop-shadow(0 0 12px rgb(159 197 233 / .35));
+}
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .brand {
+    background: linear-gradient(105deg, var(--ink) 38%, var(--on));
+    -webkit-background-clip: text;
+            background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}
+.lead {
+  grid-area: lead;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 30px;
+  padding: 0 4px;
+  font: 500 14px/1.35 var(--font-ui);
+  letter-spacing: .01em;
+  text-shadow: 0 1px 6px rgb(15 24 57 / .9);
+}
+.lead::before, .note::before {   /* a mote */
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--on);
+  box-shadow: 0 0 6px rgb(159 197 233 / .8);
+}
+
+/* ---------- Panels: a navy plate, a lit rim, a soft glow on the side facing the light ---------- */
+.panel {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-radius: 7px;
+  box-shadow: 0 12px 26px -14px rgb(15 24 57 / .95);
+}
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border: 1px solid transparent;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--bg), var(--bg)) padding-box,
+    conic-gradient(from calc(var(--rim) - 180deg),
+      rgb(164 182 183 / .5) 0deg,
+      rgb(164 182 183 / .66) 95deg,
+      var(--on) 145deg,
+      var(--ink) 180deg,
+      var(--on) 215deg,
+      rgb(164 182 183 / .66) 265deg,
+      rgb(164 182 183 / .5) 360deg) border-box;
+}
+.panel::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: -2;
+  border-radius: inherit;
+  pointer-events: none;
+  background: conic-gradient(from calc(var(--rim) - 180deg),
+    transparent 0deg 100deg,
+    rgb(159 197 233 / .6) 150deg,
+    rgb(241 241 241 / .75) 180deg,
+    rgb(159 197 233 / .6) 210deg,
+    transparent 260deg 360deg);
+  filter: blur(9px);
+  opacity: calc(.3 + .7 * var(--lit));
+}
+.panel > h2 {
+  position: absolute;
+  top: -6px;
+  left: 7px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--bg);
+  font: 600 10.5px/13px var(--font-ui);
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ---------- Groups: a table of knobs ---------- */
+.group { padding: 22px 12px 14px; gap: 4px; }
+.osc { grid-area: osc; }
+.filter { grid-area: filter; }
+.env { grid-area: env; }
+
+/* columns: name, Min, Max, Initial (Envelope: Initial for Amp Env, and for Filter Env and Mod Env) */
+.thead, .row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(3, var(--cell));
+  column-gap: 8px;
+}
+.env :is(.thead, .row) { grid-template-columns: minmax(0, 1fr) repeat(4, var(--cell)); }
+.thead {
+  align-items: end;
+  padding: 0 8px 8px;
+  border-bottom: 1px solid rgb(164 182 183 / .45);
+  font: 600 9.5px/1.25 var(--font-ui);
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  text-align: center;
+}
+.thead .knob { text-align: left; }
+.env .thead { grid-template-rows: auto auto; row-gap: 5px; }
+.env .thead .knob, .env .thead .mn, .env .thead .mx { grid-row: 1 / span 2; }
+.env .thead .ini {               /* "Initial" over its two columns, with a bracket line */
+  grid-column: 4 / span 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.env .thead .ini::before, .env .thead .ini::after { content: ""; flex: 1; height: 1px; background: rgb(164 182 183 / .6); }
+.env .thead .who { grid-row: 2; font-size: 9px; letter-spacing: .1em; }
+.env .thead .who.amp { grid-column: 4; }
+.env .thead .who.fm { grid-column: 5; }
+
+.rows { display: grid; }
+.row {
+  position: relative;
+  grid-template-areas: "name min max init" "unit bar bar .";
+  align-items: center;
+  row-gap: 7px;
+  padding: 9px 8px 10px;
+  border-radius: 7px;
+}
+.env .row { grid-template-areas: "name min max ia fm" "unit bar bar . ."; }
+.env .row.shared { grid-template-areas: "name min max init init" "unit bar bar . ."; }
+.row + .row::before {            /* hairline between knobs */
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 8px;
+  right: 8px;
+  height: 1px;
+  background: rgb(164 182 183 / .16);
+}
+.row:hover { background: rgb(241 241 241 / .045); }
+.name {
+  grid-area: name;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font: 600 14.5px/1.2 var(--font-ui);
+  letter-spacing: .01em;
+  white-space: nowrap;
+}
+.name::after {                   /* a faint leader that carries the eye to the fields */
+  content: "";
+  flex: 1;
+  min-width: 0;
+  height: 1px;
+  margin-right: 2px;
+  background: repeating-linear-gradient(90deg, rgb(164 182 183 / .38) 0 1px, transparent 1px 4px);
+}
+.unit {                          /* a unit that the fields do not repeat */
+  grid-area: unit;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  padding: 0 6px;
+  border: 1px solid rgb(164 182 183 / .85);
+  border-radius: 8px;
+  font: 600 9px/1 var(--font-ui);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.cell { display: grid; gap: 3px; min-width: 0; }
+.cell.min { grid-area: min; }
+.cell.max { grid-area: max; }
+.cell.init { grid-area: init; }
+.cell.ia { grid-area: ia; }
+.cell.fm { grid-area: fm; }
+.cell.na { grid-area: ia; }
+.row.shared .cell.init { justify-self: stretch; }
+.tiny {                          /* field names, shown only once the table header is gone */
+  display: none;
+  font: 600 9px/1.2 var(--font-ui);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.v {
+  appearance: none;
+  width: 100%;
+  height: 30px;
+  margin: 0;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 600 14px/28px var(--font-ui);
+  letter-spacing: .02em;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  cursor: text;
+}
+.v:hover { border-color: var(--on); }
+.v:focus {                       /* the field being edited is the selected item */
+  outline: none;
+  border-color: var(--on);
+  background: var(--on);
+  color: var(--navy);
+  box-shadow: 0 0 14px rgb(159 197 233 / .45);
+}
+.v::selection { background: var(--navy); color: var(--on); }
+.v[aria-invalid="true"] { border-color: var(--on); box-shadow: 0 0 0 1px var(--on), 0 0 12px rgb(159 197 233 / .35); }
+.na .dash {
+  display: grid;
+  place-items: center;
+  height: 30px;
+  font: 600 14px/1 var(--font-ui);
+}
+
+/* the range: track from Min to Max, a tick at zero, light from the anchor to the initial value */
+.bar { grid-area: bar; position: relative; height: 10px; }
+.bar::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 4px;
+  height: 2px;
+  border-radius: 1px;
+  background: rgb(164 182 183 / .5);
+}
+.bar::after {                    /* end stops, under Min and under Max */
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-inline: 1px solid rgb(164 182 183 / .85);
+}
+.bar .zero {
+  position: absolute;
+  top: 0;
+  left: var(--z, 50%);
+  width: 1px;
+  height: 10px;
+  margin-left: -.5px;
+  background: var(--line);
+}
+.bar .zero[hidden] { display: none; }
+.bar .fill {
+  position: absolute;
+  top: 4px;
+  left: var(--from, 0%);
+  width: var(--span, 0%);
+  height: 2px;
+  border-radius: 1px;
+  background: var(--on);
+  box-shadow: 0 0 6px rgb(159 197 233 / .75);
+  transition: left .3s ease, width .3s ease;
+}
+.bar .dot {
+  position: absolute;
+  top: 1px;
+  left: var(--at, 0%);
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  border-radius: 50%;
+  background: var(--on);
+  box-shadow: 0 0 7px 1px rgb(159 197 233 / .75);
+  transition: left .3s ease;
+}
+.bar .dot.out { background: transparent; border: 1px solid var(--on); }
+
+.msg {
+  grid-column: 1 / -1;
+  font: 500 12.5px/1.35 var(--font-ui);
+}
+.msg[hidden] { display: none; }
+.msg::before { content: "\2192\00a0"; color: var(--on); }
+
+.note {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  margin-top: auto;
+  padding: 12px 8px 0;
+  font: 500 12.5px/1.45 var(--font-ui);
+}
+.note::before { translate: 0 -2px; }
+.notes { display: grid; gap: 6px; margin-top: auto; }
+.notes .note { margin-top: 0; }
+
+/* ---------- Narrower windows: wrap, never shrink ---------- */
+@container stage (width < 1100px) {
+  .screen {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: "lead brand" "osc filter" "env env";
+  }
+}
+@container stage (width < 760px) {
+  .screen {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "lead brand" "osc osc" "filter filter" "env env";
+  }
+  .brand { align-self: start; }
+}
+@container stage (width < 470px) {
+  .thead { display: none; }
+  .tiny { display: block; }
+  .row, .env .row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas: "name name unit" "min max init" "bar bar .";
+    row-gap: 8px;
+  }
+  .unit { justify-self: end; }
+  .env .row { grid-template-areas: "name name unit" "min max ." "ia fm fm" "bar bar ."; }
+  .env .row.shared { grid-template-areas: "name name unit" "min max init" "bar bar ."; }
+  .env .row.fm-only { grid-template-areas: "name name unit" "min max ." "fm fm ." "bar bar ."; }
+  .env .row.fm-only .cell.na { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar .fill, .bar .dot { transition: none; }
+}
+.no-gl .panel { box-shadow: 0 0 18px rgb(159 197 233 / .10); }
+</style>
+</head>
+<body>
+
+<canvas id="sky" aria-hidden="true"></canvas>
+
+<main class="stage">
+<div class="screen">
+
+<p class="lead">Each setting covers every knob of its kind, on A, B, C and D alike.</p>
+<h1 class="brand">Mote</h1>
+
+<!-- Oscillator -->
+<section class="panel group osc" aria-labelledby="osc-title">
+  <h2 id="osc-title">Oscillator</h2>
+  <div class="thead" aria-hidden="true"><span class="knob"></span><span>Min</span><span>Max</span><span>Initial</span></div>
+  <div class="rows">
+    <div class="row" data-unit="none">
+      <span class="name">Octave</span>
+      <label class="cell min"><span class="tiny">Min</span><input class="v" data-field="min" value="&minus;2" aria-label="Octave minimum"></label>
+      <label class="cell max"><span class="tiny">Max</span><input class="v" data-field="max" value="+2" aria-label="Octave maximum"></label>
+      <label class="cell init"><span class="tiny">Initial</span><input class="v" data-field="init" value="0" aria-label="Octave initial value"></label>
+      <span class="bar" aria-hidden="true"></span>
+    </div>
+    <div class="row" data-unit="none">
+      <span class="name">Note</span>
+      <label class="cell min"><span class="tiny">Min</span><input class="v" data-field="min" value="&minus;24" aria-label="Note minimum"></label>
+      <label class="cell max"><span class="tiny">Max</span><input class="v" data-field="max" value="+24" aria-label="Note maximum"></label>
+      <label class="cell init"><span class="tiny">Initial</span><input class="v" data-field="init" value="0" aria-label="Note initial value"></label>
+      <span class="bar" aria-hidden="true"></span>
+    </div>
+    <div class="row" data-unit="cents">
+      <span class="name">Fine</span>
+      <span class="unit">Cents</span>
+      <label class="cell min"><span class="tiny">Min</span><input class="v" data-field="min" value="&minus;100" aria-label="Fine minimum, in cents"></label>
+      <label class="cell max"><span class="tiny">Max</span><input class="v" data-field="max" value="+100" aria-label="Fine maximum, in cents"></label>
+      <label class="cell init"><span class="tiny">Initial</span><input class="v" data-field="init" value="0" aria-label="Fine initial value, in cents"></label>
+      <span class="bar" aria-hidden="true"></span>
+    </div>
+    <div class="row" data-unit="dB">
+      <span class="name">Volume</span>
+      <label class="cell min"><span class="tiny">Min</span><input class="v" data-field="min" value="&minus;60 dB" aria-label="Volume minimum"></label>
+      <label class="cell max"><span class="tiny">Max</span><input class="v" data-field="max" value="+12 dB" aria-label="Volume maximum"></label>
+      <label class="cell init"><span class="tiny">Initial</span><input class="v" data-field="init" value="0 dB" aria-label="Volume initial value"></label>
+      <span class="bar" aria-hidden="true"></span>
+    </div>
+    <div class="row" data-unit="%">
+      <span class="name">Balance</span>
+      <label class="cell min"><span class="tiny">Min</span><input class="v" data-field="min" value="&minus;100%" aria-label="Balance minimum"></label>
+      <label class="cell max"><span class="tiny">Max</span><input class="v" data-field="max" value="+100%" aria-label="Balance maximum"></label>
+      <label class="cell init"><span class="tiny">Initial</span><input class="v" data-field="init" value="&minus;100%" aria-label="Balance initial value"></label>
+      <span class="bar" aria-hidden="true"></span>
+    </div>
+    <div class="row" data-unit="cents">
+      <span class="name">Detune</span>
+      <span class="unit">Cents</span>
+      <label class="cell min"><span class="tiny">Min</span><input class="v" data-field="min" value="0" aria-label="Detune minimum, in cents"></label>
+      <label class="cell max"><span class="tiny">Max</span><input class="v" data-field="max" value="100" aria-label="Detune maximum, in cents"></label>
+      <label class="cell init"><span class="tiny">Initial</span><input class="v" data-field="init" value="0" aria-label="Detune initial value, in cents"></label>
+      <span class="bar" aria-hidden="true"></span>
+    </div>
+  </div>
+</section>
+
+<!-- Filter -->
+<section class="panel group filter" aria-labelledby="filter-title">
+  <h2 id="filter-title">Filter</h2>
+  <div class="thead" aria-hidden="true"><span class="knob"></span><span>Min</span><span>Max</span><span>Initial</span></div>
+  <div class="rows">
+    <div class="row" data-unit="Hz" data-scale="log">
+      <span class="name">Cutoff</span>
+      <label class="cell min"><span class="tiny">Min</span><input class="v" data-field="min" value="20 Hz" aria-label="Cutoff minimum"></label>
+      <label class="cell max"><span class="tiny">Max</span><input class="v" data-field="max" value="20 kHz" aria-label="Cutoff maximum"></label>
+      <label class="cell init"><span class="tiny">Initial</span><input class="v" data-field="init" value="20 kHz" aria-label="Cutoff initial value"></label>
+      <span class="bar" aria-hidden="true"></span>
+    </div>
+    <div class="row" data-unit="%">
+      <span class="name">Resonance</span>
+      <label class="cell min"><span class="tiny">Min</span><input class="v" data-field="min" value="0%" aria-label="Resonance minimum"></label>
+      <label class="cell max"><span class="tiny">Max</span><input class="v" data-field="max" value="100%" aria-label="Resonance maximum"></label>
+      <label class="cell init"><span class="tiny">Initial</span><input class="v" data-field="init" value="0%" aria-label="Resonance initial value"></label>
+      <span class="bar" aria-hidden="true"></span>
+    </div>
+    <div class="row" data-unit="%">
+      <span class="name">Drive</span>
+      <label class="cell min"><span class="tiny">Min</span><input class="v" data-field="min" value="0%" aria-label="Drive minimum"></label>
+      <label class="cell max"><span class="tiny">Max</span><input class="v" data-field="max" value="100%" aria-label="Drive maximum"></label>
+      <label class="cell init"><span class="tiny">Initial</span><input class="v" data-field="init" value="0%" aria-label="Drive initial value"></label>
+      <span class="bar" aria-hidden="true"></span>
+    </div>
+    <div class="row" data-unit="%">
+      <span class="name">Amount</span>
+      <label class="cell min"><span class="tiny">Min</span><input class="v" data-field="min" value="0%" aria-label="Filter Amount minimum"></label>
+      <label class="cell max"><span class="tiny">Max</span><input class="v" data-field="max" value="100%" aria-label="Filter Amount maximum"></label>
+      <label class="cell init"><span class="tiny">Initial</span><input class="v" data-field="init" value="0%" aria-label="Filter Amount initial value"></label>
+      <span class="bar" aria-hidden="true"></span>
+    </div>
+  </div>
+  <p class="note">Both filters of each chain use these values.</p>
+</section>
+
+<!-- Envelope -->
+<section class="panel group env" aria-labelledby="env-title">
+  <h2 id="env-title">Envelope</h2>
+  <div class="thead" aria-hidden="true">
+    <span class="knob"></span><span class="mn">Min</span><span class="mx">Max</span>
+    <span class="ini">Initial</span>
+    <span class="who amp">Amp Env</span><span class="who fm">Filter Env<br>Mod Env</span>
+  </div>
+  <div class="rows">
+    <div class="row" data-unit="s">
+      <span class="name">Attack</span>
+      <label class="cell min"><span class="tiny">Min</span><input class="v" data-field="min" value="0 s" aria-label="Attack minimum"></label>
+      <label class="cell max"><span class="tiny">Max</span><input class="v" data-field="max" value="10 s" aria-label="Attack maximum"></label>
+      <label class="cell ia"><span class="tiny">Initial, Amp Env</span><input class="v" data-field="init" value="0.001 s" aria-label="Attack initial value for Amp Env"></label>
+      <label class="cell fm"><span class="tiny">Initial, Filter Env and Mod Env</span><input class="v" data-field="init" value="0 s" aria-label="Attack initial value for Filter Env and Mod Env"></label>
+      <span class="bar" aria-hidden="true"></span>
+    </div>
+    <div class="row shared" data-unit="s">
+      <span class="name">Decay</span>
+      <label class="cell min"><span class="tiny">Min</span><input class="v" data-field="min" value="0 s" aria-label="Decay minimum"></label>
+      <label class="cell max"><span class="tiny">Max</span><input class="v" data-field="max" value="10 s" aria-label="Decay maximum"></label>
+      <label class="cell init"><span class="tiny">Initial</span><input class="v" data-field="init" value="0.3 s" aria-label="Decay initial value for all three envelopes"></label>
+      <span class="bar" aria-hidden="true"></span>
+    </div>
+    <div class="row shared" data-unit="s">
+      <span class="name">Release</span>
+      <label class="cell min"><span class="tiny">Min</span><input class="v" data-field="min" value="0 s" aria-label="Release minimum"></label>
+      <label class="cell max"><span class="tiny">Max</span><input class="v" data-field="max" value="10 s" aria-label="Release maximum"></label>
+      <label class="cell init"><span class="tiny">Initial</span><input class="v" data-field="init" value="0.05 s" aria-label="Release initial value for all three envelopes"></label>
+      <span class="bar" aria-hidden="true"></span>
+    </div>
+    <div class="row shared" data-unit="none">
+      <span class="name">Sustain</span>
+      <label class="cell min"><span class="tiny">Min</span><input class="v" data-field="min" value="0" aria-label="Sustain minimum"></label>
+      <label class="cell max"><span class="tiny">Max</span><input class="v" data-field="max" value="1" aria-label="Sustain maximum"></label>
+      <label class="cell init"><span class="tiny">Initial</span><input class="v" data-field="init" value="1" aria-label="Sustain initial value for all three envelopes"></label>
+      <span class="bar" aria-hidden="true"></span>
+    </div>
+    <div class="row shared" data-unit="none">
+      <span class="name">Curve</span>
+      <label class="cell min"><span class="tiny">Min</span><input class="v" data-field="min" value="&minus;1" aria-label="Curve minimum"></label>
+      <label class="cell max"><span class="tiny">Max</span><input class="v" data-field="max" value="+1" aria-label="Curve maximum"></label>
+      <label class="cell init"><span class="tiny">Initial</span><input class="v" data-field="init" value="0" aria-label="Curve initial value for all three envelopes"></label>
+      <span class="bar" aria-hidden="true"></span>
+    </div>
+    <div class="row fm-only" data-unit="%">
+      <span class="name">Amount</span>
+      <label class="cell min"><span class="tiny">Min</span><input class="v" data-field="min" value="&minus;100%" aria-label="Envelope Amount minimum, Filter Env and Mod Env"></label>
+      <label class="cell max"><span class="tiny">Max</span><input class="v" data-field="max" value="+100%" aria-label="Envelope Amount maximum, Filter Env and Mod Env"></label>
+      <span class="cell na"><span class="tiny">Amp Env</span><span class="dash" role="img" aria-label="Amp Env has no Amount">&mdash;</span></span>
+      <label class="cell fm"><span class="tiny">Initial, Filter Env and Mod Env</span><input class="v" data-field="init" value="0%" aria-label="Envelope Amount initial value, Filter Env and Mod Env"></label>
+      <span class="bar" aria-hidden="true"></span>
+    </div>
+  </div>
+  <div class="notes">
+    <p class="note">Amp Env, Filter Env and Mod Env share every range here. Only Attack starts at a different value.</p>
+    <p class="note">Amount belongs to Filter Env and Mod Env only.</p>
+  </div>
+</section>
+
+</div>
+</main>
+
+<script>
+/* Setting screen mock. The fields edit sample numbers on this page only: nothing plays
+   audio and nothing is written to disk. The sky below is the Main screen's light, unchanged. */
+(() => {
+  "use strict";
+
+  /* ---------- Reading and writing values with their units ---------- */
+  const MINUS = "−";
+  const UNITS = {
+    none:  { names: [""], scale: { "": 1 } },
+    cents: { names: ["", "ct", "cent", "cents"], scale: { "": 1, ct: 1, cent: 1, cents: 1 } },
+    dB:    { names: ["", "db"], scale: { "": 1, db: 1 } },
+    "%":   { names: ["", "%"], scale: { "": 1, "%": 1 } },
+    s:     { names: ["", "s", "sec", "secs", "second", "seconds", "ms"],
+             scale: { "": 1, s: 1, sec: 1, secs: 1, second: 1, seconds: 1, ms: 0.001 } },
+    Hz:    { names: ["", "hz", "k", "khz"], scale: { "": 1, hz: 1, k: 1000, khz: 1000 } },
+  };
+  const EXAMPLE = { none: "0.5", cents: "50", dB: "-6 dB", "%": "50%", s: "0.3 s", Hz: "800 Hz or 2 kHz" };
+
+  const parse = (text, unit) => {
+    const t = text.trim().replace(/[−–]/g, "-").replace(/,/g, ".").toLowerCase();
+    const m = t.match(/^([+-]?(?:\d+\.?\d*|\.\d+))\s*([a-z%]*)$/);
+    if (!m) return NaN;
+    const scale = UNITS[unit].scale[m[2]];
+    return scale === undefined ? NaN : Number(m[1]) * scale;
+  };
+  const num = (v, places) => {
+    const s = (Math.round(v * 10 ** places) / 10 ** places).toFixed(places).replace(/\.?0+$/, "");
+    return s === "-0" ? "0" : s;
+  };
+  const format = (v, unit, signed) => {
+    let body;
+    if (unit === "Hz") body = v >= 1000 ? num(v / 1000, 2) + " kHz" : num(v, 1) + " Hz";
+    else body = num(v, 3) + ({ dB: " dB", "%": "%", s: " s" }[unit] || "");
+    if (body.startsWith("-")) return MINUS + body.slice(1);
+    return signed && v > 0 ? "+" + body : body;
+  };
+
+  /* ---------- One row per knob ---------- */
+  const rows = [...document.querySelectorAll(".row")].map((el) => {
+    const unit = el.dataset.unit;
+    const fields = [...el.querySelectorAll(".v")];
+    const row = {
+      el, unit, log: el.dataset.scale === "log",
+      min: fields.find((f) => f.dataset.field === "min"),
+      max: fields.find((f) => f.dataset.field === "max"),
+      inits: fields.filter((f) => f.dataset.field === "init"),
+      bar: el.querySelector(".bar"),
+      msg: null,
+    };
+    for (const f of fields) {
+      f.value = f.value.trim();
+      f.dataset.value = String(parse(f.value, unit));
+      f.setAttribute("inputmode", "decimal");
+      f.setAttribute("autocomplete", "off");
+      f.setAttribute("spellcheck", "false");
+    }
+    const msg = document.createElement("p");
+    msg.className = "msg";
+    msg.hidden = true;
+    msg.id = "msg-" + Math.random().toString(36).slice(2, 8);
+    el.append(msg);
+    row.msg = msg;
+    row.bar.innerHTML = '<i class="zero"></i><i class="fill"></i>' + row.inits.map(() => '<i class="dot"></i>').join("");
+    return row;
+  });
+  const value = (f) => Number(f.dataset.value);
+
+  /* where a value sits between Min and Max, 0..1 (Cutoff on a log scale, as its knob moves) */
+  const place = (row, v) => {
+    const lo = value(row.min), hi = value(row.max);
+    if (!(hi > lo)) return 0;
+    const t = row.log && lo > 0 && v > 0
+      ? (Math.log(v) - Math.log(lo)) / (Math.log(hi) - Math.log(lo))
+      : (v - lo) / (hi - lo);
+    return Math.min(1, Math.max(0, t));
+  };
+  const drawBar = (row) => {
+    const lo = value(row.min), hi = value(row.max);
+    const zero = row.bar.querySelector(".zero");
+    const spansZero = lo < 0 && hi > 0;
+    zero.hidden = !spansZero;
+    const anchor = spansZero ? place(row, 0) : 0;
+    zero.style.setProperty("--z", (anchor * 100).toFixed(2) + "%");
+    const first = place(row, value(row.inits[0]));
+    const fill = row.bar.querySelector(".fill");
+    fill.style.setProperty("--from", (Math.min(anchor, first) * 100).toFixed(2) + "%");
+    fill.style.setProperty("--span", (Math.abs(first - anchor) * 100).toFixed(2) + "%");
+    row.bar.querySelectorAll(".dot").forEach((dot, i) => {
+      const v = value(row.inits[i]);
+      dot.style.setProperty("--at", (place(row, v) * 100).toFixed(2) + "%");
+      dot.classList.toggle("out", !(v >= Math.min(lo, hi) && v <= Math.max(lo, hi)));
+    });
+  };
+
+  /* ---------- Checking a row ---------- */
+  /* returns what is wrong and which fields to mark, or null */
+  const problem = (row) => {
+    const lo = value(row.min), hi = value(row.max);
+    if (!(lo < hi)) return { text: "Min has to be lower than Max.", fields: [row.min, row.max] };
+    if (row.log && lo <= 0) return { text: "Cutoff has to stay above 0 Hz.", fields: [row.min] };
+    const out = row.inits.filter((f) => !(value(f) >= lo && value(f) <= hi));
+    if (!out.length) return null;
+    const text = out.length > 1 ? "Both initial values have to sit between Min and Max."
+      : row.inits.length > 1 ? `The initial value for ${out[0] === row.inits[0] ? "Amp Env" : "Filter Env and Mod Env"} has to sit between Min and Max.`
+      : "The initial value has to sit between Min and Max.";
+    return { text, fields: out };
+  };
+  const show = (row, issue) => {
+    row.msg.textContent = issue ? issue.text : "";
+    row.msg.hidden = !issue;
+    for (const f of [row.min, row.max, ...row.inits]) {
+      if (issue && issue.fields.includes(f)) { f.setAttribute("aria-invalid", "true"); f.setAttribute("aria-describedby", row.msg.id); }
+      else { f.removeAttribute("aria-invalid"); f.removeAttribute("aria-describedby"); }
+    }
+  };
+  const refresh = (row) => {
+    const signed = value(row.min) < 0;
+    for (const f of [row.min, row.max, ...row.inits]) {
+      if (document.activeElement !== f) f.value = format(value(f), row.unit, signed);
+    }
+    drawBar(row);
+    show(row, problem(row));
+  };
+
+  /* ---------- Editing ---------- */
+  const rowOf = (f) => rows.find((r) => r.el.contains(f));
+  const commit = (f) => {
+    const row = rowOf(f);
+    const v = parse(f.value, row.unit);
+    if (Number.isNaN(v)) {
+      show(row, { text: `Type a number, like ${EXAMPLE[row.unit]}.`, fields: [f] });
+      return false;
+    }
+    f.dataset.value = String(v);
+    f.value = format(v, row.unit, value(row.min) < 0);
+    refresh(row);
+    return true;
+  };
+  for (const row of rows) {
+    for (const f of [row.min, row.max, ...row.inits]) {
+      f.addEventListener("focus", () => requestAnimationFrame(() => f.select()));
+      f.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); if (commit(f)) f.select(); }
+        else if (e.key === "Escape") {
+          e.preventDefault();
+          f.value = format(value(f), row.unit, value(row.min) < 0);
+          refresh(row);
+          f.blur();
+        }
+      });
+      f.addEventListener("blur", () => {
+        if (!commit(f)) {          /* a typo: go back to the last good number */
+          f.value = format(value(f), row.unit, value(row.min) < 0);
+          refresh(row);
+        }
+      });
+    }
+    refresh(row);
+  }
+
+  /* ---------- The sky: mist, a drifting light the panels break into shafts, and motes ---------- */
+  const root = document.documentElement;
+  const screen = document.querySelector(".screen");
+  const lit = [screen, ...document.querySelectorAll(".panel")];
+  const canvas = document.getElementById("sky");
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  let vw = innerWidth, vh = innerHeight;
+  let art = screen.getBoundingClientRect();
+  let boxes = [];
+  let occDirty = true;
+
+  const measure = () => {
+    vw = innerWidth;
+    vh = innerHeight;
+    art = screen.getBoundingClientRect();
+    boxes = lit.flatMap((n) => {
+      if (n !== screen && n.offsetParent === null) return [];
+      const r = n.getBoundingClientRect();
+      return [{ el: n, r, cx: r.left + r.width / 2, cy: r.top + r.height / 2 }];
+    });
+    occDirty = true;
+  };
+
+  /* One soft light hangs in the strip above the first panels and drifts (~96 s across, ~61 s bob).
+     It also leans toward the pointer, easing about a second behind it. */
+  let pointerX = null, lightX = null;
+  if (!still) {
+    addEventListener("pointermove", (e) => { pointerX = e.clientX; }, { passive: true });
+    document.addEventListener("pointerout", (e) => { if (!e.relatedTarget) pointerX = null; });
+  }
+  const lightAt = (t) => {
+    let x = art.left + art.width * (0.4 + 0.18 * Math.sin(t * 0.0654));
+    if (pointerX !== null) x += (Math.min(Math.max(pointerX, art.left), art.right) - x) * 0.45;
+    lightX = lightX === null || still ? x : lightX + (x - lightX) * 0.04;
+    return [lightX, Math.max(art.top + 3 + 9 * Math.sin(t * 0.103 + 1.3), -vh * 0.08)];
+  };
+
+  const rims = (lx, ly) => {
+    for (const b of boxes) {
+      const deg = Math.atan2(lx - b.cx, b.cy - ly) * (180 / Math.PI);
+      const k = Math.min(1, Math.max(0, 1.3 - Math.hypot(lx - b.cx, ly - b.cy) / 820));
+      b.el.style.setProperty("--rim", deg.toFixed(1) + "deg");
+      b.el.style.setProperty("--lit", k.toFixed(2));
+    }
+  };
+
+  const sky = makeSky();
+  if (!sky) root.classList.add("no-gl");
+
+  let raf = 0, last = -1e9, tick = 0;
+  const t0 = performance.now();
+  const paint = (sec) => {
+    const t = sec + 40;
+    const [lx, ly] = lightAt(t);
+    if (sky) {
+      if (occDirty) { sky.occlusion(); occDirty = false; }
+      sky.draw(t, lx, ly);
+    }
+    if (still || tick++ % 3 === 0) rims(lx, ly);
+  };
+  const frame = (now) => {
+    raf = requestAnimationFrame(frame);
+    if (now - last < 32) return;          /* about 30 fps is plenty for slow light */
+    last = now;
+    paint((now - t0) / 1000);
+  };
+
+  let queued = false;
+  const relayout = () => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => {
+      queued = false;
+      measure();
+      if (sky) sky.resize();
+      if (still) paint(0);
+    });
+  };
+
+  measure();
+  if (sky) sky.resize();
+  addEventListener("resize", relayout);
+  addEventListener("scroll", relayout, { passive: true });
+  if ("ResizeObserver" in window) new ResizeObserver(relayout).observe(screen);
+  if (document.fonts) document.fonts.ready.then(relayout);
+  paint(0);                               /* first frame now, so the page opens complete */
+  if (!still) raf = requestAnimationFrame(frame);
+
+  function makeSky() {
+    const opts = { alpha: false, antialias: false, depth: false, stencil: false, powerPreference: "low-power" };
+    let gl = null;
+    try { gl = canvas.getContext("webgl2", opts) || canvas.getContext("webgl", opts); } catch (e) { gl = null; }
+    if (!gl) return null;
+
+    const VERT = "attribute vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }";
+    const FRAG = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+uniform vec2 uRes;       // drawing buffer, px
+uniform float uTime;     // seconds
+uniform vec2 uLight;     // light position, 0..1 with y up
+uniform vec2 uView;      // viewport, CSS px
+uniform sampler2D uOcc;  // where the panels are: 1 inside, 0 outside
+
+const vec3 NAVY = vec3(15.0, 24.0, 57.0) / 255.0;
+const vec3 INK  = vec3(241.0, 241.0, 241.0) / 255.0;
+const vec3 LINE = vec3(164.0, 182.0, 183.0) / 255.0;
+const vec3 ON   = vec3(159.0, 197.0, 233.0) / 255.0;
+
+float hash12(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+vec2 hash22(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.xx + p3.yz) * p3.zy);
+}
+float vnoise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  float a = hash12(i), b = hash12(i + vec2(1.0, 0.0));
+  float c = hash12(i + vec2(0.0, 1.0)), d = hash12(i + vec2(1.0, 1.0));
+  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+float fbm(vec2 p) {
+  float v = 0.0, a = 0.5;
+  mat2 m = mat2(1.6, 1.2, -1.2, 1.6);
+  for (int i = 0; i < 5; i++) { v += a * vnoise(p); p = m * p; a *= 0.5; }
+  return v;
+}
+float occAt(vec2 uv) { return texture2D(uOcc, uv).r; }
+float glow(vec2 uv) {
+  vec2 d = (uv - uLight) * uView / uView.y;
+  return exp(-dot(d, d) * 3.2);
+}
+float motes(vec2 uv, float cells, float rad, float soft, float rise, float keep, float seed, float t) {
+  vec2 p = uv * uView / uView.y * cells;
+  p += vec2(sin(t * 0.023 + seed) * 1.7, -t * rise * cells);
+  vec2 id = floor(p), f = fract(p);
+  float acc = 0.0;
+  for (int j = -1; j <= 1; j++) {
+    for (int i = -1; i <= 1; i++) {
+      vec2 g = vec2(float(i), float(j));
+      vec2 c = id + g;
+      vec2 h = hash22(c + seed);
+      if (h.x < keep) {
+        vec2 o = g + 0.5 + (hash22(c + seed + 7.31) - 0.5) * 0.76
+               + 0.16 * vec2(sin(t * (0.19 + h.y * 0.23) + h.y * 41.0), cos(t * (0.15 + h.x * 0.2) + h.x * 37.0));
+        float d = length(f - o);
+        float tw = 0.55 + 0.45 * sin(t * (0.3 + h.y * 0.7) + h.x * 61.0);
+        acc += tw * (1.0 - smoothstep(rad * soft, rad, d));
+      }
+    }
+  }
+  return acc;
+}
+// thin veins of light, like light through moving water
+float veins(vec2 p, float t) {
+  vec2 w = vec2(fbm(p * 1.3 - t * 0.02), fbm(p * 1.3 + 4.1 + t * 0.015));
+  float n = fbm(p + vec2(t * 0.03, -t * 0.02) + 0.6 * w);
+  float r = 1.0 - abs(2.0 * n - 1.0);
+  return pow(r, 7.0);
+}
+
+void main() {
+  vec2 uv = gl_FragCoord.xy / uRes;
+  vec2 asp = uView / uView.y;
+  float t = uTime;
+
+  // mist: slow, folded noise
+  vec2 hp = uv * asp * 1.7;
+  vec2 q = vec2(fbm(hp + vec2(0.0, t * 0.011)), fbm(hp + vec2(5.2, 1.3) - t * 0.009));
+  float mist = fbm(hp + 1.7 * q + vec2(t * 0.005, -t * 0.007));
+
+  // shafts: march toward the light; panels block it
+  vec2 toL = uLight - uv;
+  vec2 stp = toL * (0.92 / 28.0);
+  vec2 s = uv + stp * hash12(gl_FragCoord.xy);
+  float shaft = 0.0, w = 1.0;
+  for (int i = 0; i < 28; i++) {
+    shaft += glow(s) * (1.0 - occAt(s)) * w;
+    w *= 0.962;
+    s += stp;
+  }
+  float breathe = 0.9 + 0.1 * sin(t * 0.21);
+  shaft *= breathe / 28.0;
+
+  float here = occAt(uv);
+  float g = glow(uv) * breathe;
+
+  // halo: an edge that faces the light catches it
+  float ring = 0.0;
+  for (int i = 0; i < 8; i++) {
+    float a = float(i) * 0.785398 + 0.39;
+    vec2 o = vec2(cos(a), sin(a)) / uView;
+    ring += occAt(uv + o * 6.0) * 0.55 + occAt(uv + o * 15.0) * 0.45;
+  }
+  ring /= 8.0;
+  vec2 dirL = normalize(toL * uView + 1e-4);
+  float behind = occAt(uv - dirL * 12.0 / uView);
+  float halo = ring * (1.0 - here) * (0.15 + 0.85 * behind) * (0.25 + 1.6 * g);
+
+  // motes: far specks, nearer specks, a few out-of-focus discs
+  float m = motes(uv, 62.0, 0.11, 0.25, 0.0042, 0.16, 3.1, t) * 0.8
+          + motes(uv, 28.0, 0.09, 0.3, 0.0068, 0.22, 11.7, t) * 1.1
+          + motes(uv, 10.0, 0.2, 0.0, 0.0105, 0.2, 23.9, t) * 0.2;
+  float catchLight = 0.2 + shaft * 4.5 + g * 0.9;
+
+  vec3 col = NAVY;
+  col = mix(col, mix(LINE, ON, 0.7), smoothstep(0.3, 0.95, mist) * 0.24 + g * 0.12);
+  col += ON * (shaft * 0.62 + g * 0.05);
+  col += INK * shaft * shaft * 0.95;
+  col += mix(ON, INK, 0.4) * veins(uv * asp * 3.2, t) * (g * 0.55 + shaft * 1.6) * 0.42;
+  col += mix(ON, INK, 0.3) * halo * 0.45;
+  col += mix(ON, INK, 0.65) * m * catchLight * (1.0 - here);
+
+  vec2 vv = (uv - 0.5) * asp;
+  col *= 1.0 - 0.34 * smoothstep(0.45, 1.25, length(vv));
+  col = pow(min(col, vec3(0.86)), vec3(1.06));
+  col += (hash12(gl_FragCoord.xy + fract(t * 7.0) * 113.0) - 0.5) / 255.0;
+  gl_FragColor = vec4(col, 1.0);
+}`;
+
+    const compile = (type, src) => {
+      const sh = gl.createShader(type);
+      gl.shaderSource(sh, src);
+      gl.compileShader(sh);
+      if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) { console.warn(gl.getShaderInfoLog(sh)); return null; }
+      return sh;
+    };
+    const vs = compile(gl.VERTEX_SHADER, VERT);
+    const fs = compile(gl.FRAGMENT_SHADER, FRAG);
+    if (!vs || !fs) return null;
+    const prog = gl.createProgram();
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.bindAttribLocation(prog, 0, "p");
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { console.warn(gl.getProgramInfoLog(prog)); return null; }
+    gl.useProgram(prog);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+    const U = {};
+    for (const n of ["uRes", "uTime", "uLight", "uView", "uOcc"]) U[n] = gl.getUniformLocation(prog, n);
+
+    const tex = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.uniform1i(U.uOcc, 0);
+
+    /* panel mask at a quarter of the viewport size */
+    const occ = document.createElement("canvas");
+    const octx = occ.getContext("2d");
+    let shownOnce = false;
+
+    canvas.addEventListener("webglcontextlost", (e) => {
+      e.preventDefault();
+      cancelAnimationFrame(raf);
+      canvas.classList.remove("on");
+      root.classList.add("no-gl");
+    });
+
+    return {
+      resize() {
+        /* soft light needs few pixels: about 0.6 of the screen, at most ~1.2 megapixels */
+        const s = Math.min(Math.min(window.devicePixelRatio || 1, 2) * 0.62, Math.sqrt(1.2e6 / (vw * vh)));
+        const w = Math.max(2, Math.round(vw * s)), h = Math.max(2, Math.round(vh * s));
+        if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+        gl.viewport(0, 0, w, h);
+      },
+      occlusion() {
+        const q = 4;
+        const w = Math.max(2, Math.ceil(vw / q)), h = Math.max(2, Math.ceil(vh / q));
+        if (occ.width !== w || occ.height !== h) { occ.width = w; occ.height = h; }
+        octx.fillStyle = "#000";
+        octx.fillRect(0, 0, w, h);
+        octx.fillStyle = "#fff";
+        for (const b of boxes) {
+          if (b.el === screen) continue;
+          const r = b.r;
+          if (r.bottom < 0 || r.top > vh || r.right < 0 || r.left > vw) continue;
+          octx.beginPath();
+          if (octx.roundRect) octx.roundRect(r.left / q, r.top / q, r.width / q, r.height / q, 7 / q);
+          else octx.rect(r.left / q, r.top / q, r.width / q, r.height / q);
+          octx.fill();
+        }
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, occ);
+      },
+      draw(t, lx, ly) {
+        gl.uniform2f(U.uRes, canvas.width, canvas.height);
+        gl.uniform1f(U.uTime, t);
+        gl.uniform2f(U.uLight, lx / vw, 1 - ly / vh);
+        gl.uniform2f(U.uView, vw, vh);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        if (!shownOnce) { shownOnce = true; canvas.classList.add("on"); }
+      },
+    };
+  }
+})();
+</script>
+</body>
+</html>

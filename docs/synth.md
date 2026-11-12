@@ -10,21 +10,21 @@ Oscillator 1〜4 は、それぞれ自分の Filter と Amp Env を通り、Mast
 
 ## Main のタブ
 
-画面上部に ALL、OSC 1、OSC 2、OSC 3、OSC 4 を置く。
+画面上部に ALL、A、B、C、D を置く。A は 1 本目の列、B、C、D も同じ順である。昔の「2 基でフィルターを共有するパート」ではない。
 
 ALL は、4 本の列を一覧する。大きな図は置かない。
 
-OSC 1 は、Oscillator 1 とその Filter、Filter Env、Amp Env だけを表示する。波形、Unison の点、エンベロープの曲線を大きく描く。OSC 2、OSC 3、OSC 4 も同じ対応にする。
+A は、その列の Oscillator、Filter、Filter Env、Amp Env だけを表示する。波形、Unison の点、エンベロープの曲線を大きく描く。B、C、D も同じ対応にする。
 
 Master、Mod Env、LFO はタブの外に残し、どのタブでも見える。
 
 ## Oscillator（1〜4 共通）
 
-4基とも同じ項目を持つ。初期状態でオンなのは Oscillator 1 だけである。2、3、4 はオフで、オフのあいだはその基を計算しない。
+4基とも同じ項目を持つ。表示名は A On、B Octave のように列の文字を付ける。初期状態でオンなのは A だけである。B、C、D はオフで、オフのあいだはその基を計算しない。
 
 範囲と初期値は、Phase 3 の Setting 画面で変えられるようにする。それまでは、ここに書いた値を本体の初期値にする。
 
-- On。Oscillator 1 の初期値はオン。2、3、4 はオフ
+- On。A の初期値はオン。B、C、D はオフ
 
 ### Pitch
 
@@ -45,7 +45,7 @@ Master、Mod Env、LFO はタブの外に残し、どのタブでも見える。
 - Wave
 - Phase
 - Inv（Waveの反転）
-- Retrigger
+- Retrigger。初期値はオフ。オンのときだけ、ノートオンで Phase の位置から打ち直す
 
 ### Unison
 
@@ -58,19 +58,25 @@ Detune の単位はセント。初期値 0。範囲は 0 から 100。最大の�
 
 ## Filter（1〜4 共通）
 
-4基とも同じ項目を持つ。各 Filter の設定を、同期の ON/OFF で揃えられる。
+4基とも音の項目は同じである。揃えるスイッチは A にだけ置く。A の Sync をオンにしたあと、Sync B、Sync C、Sync D で揃える列を選ぶ。複数を同時に選べる。ある列を対象にした瞬間、その列のノブは A の値で上書きされる。揃っているあいだ、A と対象の列のどちらを動かしても、揃っている列は同じ値になる。Sync をオフにすると揃えるのをやめ、対象だった列には、そのとき A に出ていた値を残す。再びオンにしたとき、まだ選ばれている列はもう一度 A の値で上書きされる。
 
 - Type
 - Amount
 - Drive
 - Cutoff
 - Resonance
+- Sync
+- Sync B
+- Sync C
+- Sync D
 
 Amp Env、Filter Env、Mod Env は、Attack、Decay、Sustain、Release のそれぞれに Curve を持つ。中央の初期値は直線で、片方は最初が急で後から緩やかになり、もう片方は最初が緩やかで後から急になる。LFO には付けない。音への反映は Phase 2 の各 Env で行い、画面にノブが並ぶのは Phase 3 である。
 
 ## Amp Env（1〜4 共通）
 
-4基とも同じ項目を持つ。各 Amp Env の設定を、同期の ON/OFF で揃えられる。
+4基とも音の項目は同じである。揃えるスイッチは A にだけ置く。A の Sync をオンにしたあと、Sync B、Sync C、Sync D で揃える列を選ぶ。複数を同時に選べる。ある列を対象にした瞬間、その列のノブは A の値で上書きされる。揃っているあいだ、A と対象の列のどちらを動かしても、揃っている列は同じ値になる。Sync をオフにすると揃えるのをやめ、対象だった列には、そのとき A に出ていた値を残す。再びオンにしたとき、まだ選ばれている列はもう一度 A の値で上書きされる。
+
+Attack、Decay、Release の初期値は 0 秒、0.3 秒、0.05 秒。範囲は 0 秒から 10 秒。Sustain の初期値は 1、範囲は 0 から 1。Curve の初期値は 0（直線）、範囲は -1 から +1。-1 は最初が急、+1 は最初が緩やか。
 
 - Attack
 - Attack Curve
@@ -80,10 +86,16 @@ Amp Env、Filter Env、Mod Env は、Attack、Decay、Sustain、Release のそ�
 - Sustain Curve
 - Release
 - Release Curve
+- Sync
+- Sync B
+- Sync C
+- Sync D
 
 ## Filter Env（1〜4 共通）
 
-4基とも同じ項目を持つ。各 Filter Env の設定を、同期の ON/OFF で揃えられる。Filter Env 1 は Filter 1 の Cutoff だけを動かし、2、3、4 も同じ対応にする。Amount は、そのエンベロープで Cutoff をどれだけ動かすかである。
+4基とも音の項目は同じである。揃えるスイッチは A にだけ置く。A の Sync をオンにしたあと、Sync B、Sync C、Sync D で揃える列を選ぶ。複数を同時に選べる。ある列を対象にした瞬間、その列のノブは A の値で上書きされる。揃っているあいだ、A と対象の列のどちらを動かしても、揃っている列は同じ値になる。Sync をオフにすると揃えるのをやめ、対象だった列には、そのとき A に出ていた値を残す。再びオンにしたとき、まだ選ばれている列はもう一度 A の値で上書きされる。
+
+Filter Env A は Filter A の Cutoff だけを動かし、B、C、D も同じ対応にする。Amount は、そのエンベロープで Cutoff をどれだけ動かすかである。
 
 - Attack
 - Attack Curve
@@ -94,10 +106,16 @@ Amp Env、Filter Env、Mod Env は、Attack、Decay、Sustain、Release のそ�
 - Release
 - Release Curve
 - Amount
+- Sync
+- Sync B
+- Sync C
+- Sync D
 
 ## Mod Env（1〜4 共通）
 
-4基とも同じ項目を持つ。各 Mod Env の設定を、同期の ON/OFF で揃えられる。割り当て先は Oscillator、Filter、Amp Env の各設定である。
+4基とも音の項目は同じである。揃えるスイッチは A にだけ置く。A の Sync をオンにしたあと、Sync B、Sync C、Sync D で揃える列を選ぶ。複数を同時に選べる。ある列を対象にした瞬間、その列のノブは A の値で上書きされる。揃っているあいだ、A と対象の列のどちらを動かしても、揃っている列は同じ値になる。Sync をオフにすると揃えるのをやめ、対象だった列には、そのとき A に出ていた値を残す。再びオンにしたとき、まだ選ばれている列はもう一度 A の値で上書きされる。
+
+割り当て先は Oscillator、Filter、Amp Env の各設定である。
 
 - Attack
 - Attack Curve
@@ -108,17 +126,25 @@ Amp Env、Filter Env、Mod Env は、Attack、Decay、Sustain、Release のそ�
 - Release
 - Release Curve
 - Amount
+- Sync
+- Sync B
+- Sync C
+- Sync D
 
 ## LFO（1〜4 共通）
 
-4基とも同じ項目を持つ。各 LFO の設定を、同期の ON/OFF で揃えられる。割り当て先は Oscillator、Filter、Amp Env の各設定である。ここでの Sync は、テンポに合わせる設定である。
+4基とも音の項目は同じである。揃えるスイッチは A にだけ置く。A の Sync をオンにしたあと、Sync B、Sync C、Sync D で揃える列を選ぶ。複数を同時に選べる。ある列を対象にした瞬間、その列のノブは A の値で上書きされる。揃っているあいだ、A と対象の列のどちらを動かしても、揃っている列は同じ値になる。Sync をオフにすると揃えるのをやめ、対象だった列には、そのとき A に出ていた値を残す。再びオンにしたとき、まだ選ばれている列はもう一度 A の値で上書きされる。テンポに合わせるノブは Tempo と表示し、揃える Sync と混同しない。割り当て先は Oscillator、Filter、Amp Env の各設定である。
 
 - Wave
 - Rate
-- Sync（テンポに合わせる）
+- Tempo（テンポに合わせる）
 - Phase
 - Retrigger
 - Amount
+- Sync
+- Sync B
+- Sync C
+- Sync D
 
 ## Master
 

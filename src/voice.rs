@@ -1,26 +1,34 @@
 //! 1 つの MIDI ノートと、Classic のオシレーター 4 基。
 //!
 //! 同時に鳴るノートは 1 つ。最後に押したキーが残る。
-//! 4 基の合成は、0 dB を 4 本足しても割れにくいように 1/4 している。
+//! 4 基の合成は、オンの本数で割って音量を揃える。
+//! ノートオフのあとは Amp Env の Release が終わるまで音が残る。
 
+use crate::envelope::{synced_amp, AmpEnvelope, AmpParams};
 use crate::oscillator::{OscParams, Oscillator};
 use crate::wavetable::WaveBank;
 
 /// プラグインが発音中に持つ状態。ノブは `MoteParams` 側にある。
 pub struct NoteVoice {
     oscillators: [Oscillator; 4],
+    amps: [AmpEnvelope; 4],
     bank: WaveBank,
     sample_rate: f32,
+    /// 今の音程。Release 中も、消えるまで残す。
     note: Option<u8>,
+    /// キーを押しているあいだ true。離すと Release に入る。
+    held: bool,
 }
 
 impl NoteVoice {
     pub fn new() -> Self {
         Self {
             oscillators: std::array::from_fn(|_| Oscillator::new()),
+            amps: std::array::from_fn(|_| AmpEnvelope::new()),
             bank: WaveBank::new(48_000.0),
             sample_rate: 48_000.0,
             note: None,
+            held: false,
         }
     }
 
@@ -34,11 +42,15 @@ impl NoteVoice {
         for oscillator in &mut self.oscillators {
             oscillator.reset();
         }
+        for amp in &mut self.amps {
+            amp.reset();
+        }
         self.note = None;
+        self.held = false;
     }
 
     pub fn is_sounding(&self) -> bool {
-        self.note.is_some()
+        self.held || self.amps.iter().any(|amp| amp.is_busy())
     }
 
     /// ベロシティ 0 のノートオンは、ノートオフとして扱う。
@@ -48,8 +60,16 @@ impl NoteVoice {
             return;
         }
         self.note = Some(key);
-        for (oscillator, osc_params) in self.oscillators.iter_mut().zip(params.iter()) {
-            oscillator.note_on(osc_params);
+        self.held = true;
+        for (index, (oscillator, osc_params)) in
+            self.oscillators.iter_mut().zip(params.iter()).enumerate()
+        {
+            if osc_params.on.value() {
+                oscillator.note_on(osc_params);
+                self.amps[index].start();
+            } else {
+                self.amps[index].reset();
+            }
         }
     }
 
@@ -61,25 +81,37 @@ impl NoteVoice {
             _ => false,
         };
         if stop {
-            self.note = None;
+            self.held = false;
+            for amp in &mut self.amps {
+                amp.release();
+            }
         }
     }
 
     /// 左右 1 サンプル。オンの基だけ足し、その本数で割る。
-    pub fn next_sample(&mut self, params: &[&OscParams; 4]) -> (f32, f32) {
+    pub fn next_sample(&mut self, oscs: &[&OscParams; 4], amps: &[&AmpParams; 4]) -> (f32, f32) {
         let mut left = 0.0;
         let mut right = 0.0;
         let mut active = 0u32;
-        for (oscillator, osc_params) in self.oscillators.iter_mut().zip(params.iter()) {
-            // オフの基は波形も位相も進まない。
+        for (index, osc_params) in oscs.iter().enumerate() {
+            // オフの基は波形もエンベロープも進まない。
             if !osc_params.on.value() {
+                self.amps[index].reset();
                 continue;
             }
             active += 1;
-            let (osc_left, osc_right) =
-                oscillator.next_sample(osc_params, &self.bank, self.note, self.sample_rate);
-            left += osc_left;
-            right += osc_right;
+            let (osc_left, osc_right) = self.oscillators[index].next_sample(
+                osc_params,
+                &self.bank,
+                self.note,
+                self.sample_rate,
+            );
+            let env = self.amps[index].next(synced_amp(index, amps).settings(), self.sample_rate);
+            left += osc_left * env;
+            right += osc_right * env;
+        }
+        if !self.held && self.amps.iter().all(|amp| !amp.is_busy()) {
+            self.note = None;
         }
         if active == 0 {
             return (0.0, 0.0);
@@ -110,11 +142,12 @@ mod tests {
         voice.set_sample_rate(48_000.0);
         let knobs = params();
         let oscs = knobs.oscillators();
+        let amps = knobs.amp_envelopes();
         voice.note_on(69, 1.0, &oscs);
 
         let mut heard = false;
         for _ in 0..32 {
-            let (left, right) = voice.next_sample(&oscs);
+            let (left, right) = voice.next_sample(&oscs, &amps);
             if left.abs() > 0.0001 || right.abs() > 0.0001 {
                 heard = true;
             }
@@ -122,7 +155,13 @@ mod tests {
         assert!(heard);
 
         voice.note_off(Some(69));
-        let (left, right) = voice.next_sample(&oscs);
+        assert!(voice.is_sounding());
+        // Release の初期値は 0.05 秒。48 kHz なら 2400 サンプルより少し多く回せば消える。
+        for _ in 0..4_000 {
+            voice.next_sample(&oscs, &amps);
+        }
+        let (left, right) = voice.next_sample(&oscs, &amps);
+        assert!(!voice.is_sounding());
         assert_eq!(left, 0.0);
         assert_eq!(right, 0.0);
     }

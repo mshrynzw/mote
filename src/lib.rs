@@ -10,6 +10,7 @@ use std::num::NonZeroU32;
 // `Arc` は複数の場所から同じ値を共有するポインタ。パラメータをホストとプラグインで共有する。
 use std::sync::Arc;
 
+mod envelope;
 mod oscillator;
 mod params;
 mod unison;
@@ -33,9 +34,12 @@ pub struct Mote {
 // ホストはプラグインを読み込むとき、このメソッドでインスタンスを作る。
 impl Default for Mote {
     fn default() -> Self {
+        // `Arc::new` で共有用のポインタにする。中身のコピーはまだ発生しない。
+        // そのあとで Sync のコピー先を結ぶ。結ぶ前は、4 基の住所がまだ決まらない。
+        let params = Arc::new(MoteParams::default());
+        params.bind_amp_sync();
         Self {
-            // `Arc::new` で共有用のポインタにする。中身のコピーはまだ発生しない。
-            params: Arc::new(MoteParams::default()),
+            params,
             voice: NoteVoice::new(),
         }
     }
@@ -52,11 +56,12 @@ impl Mote {
                 // キー番号が無いイベント（どのキーでもよい、という指定）は無視する。
                 // `if let Some(note)` は、値があるときだけ中に入る。
                 if let Some(note) = key.number() {
-                    self.voice.note_on(note, velocity, &self.params.oscillators());
+                    self.voice
+                        .note_on(note, velocity, &self.params.oscillators());
                 }
             }
-            // `|` は「この形でも、あの形でも」。ノートオフと、音を即座に切る Choke を同じ扱いにする。
-            // `key.number()` が None のときは、鳴っている音をすべて止める。
+            // `|` は「この形でも、あの形でも」。どちらも Release に入る。
+            // `key.number()` が None のときは、鳴っている音をすべて Release にする。
             NoteEvent::NoteOff { key, .. } | NoteEvent::Choke { key, .. } => {
                 self.voice.note_off(key.number());
             }
@@ -145,7 +150,9 @@ impl Plugin for Mote {
                 next_event = context.next_event();
             }
 
-            let (left, right) = self.voice.next_sample(&self.params.oscillators());
+            let (left, right) = self
+                .voice
+                .next_sample(&self.params.oscillators(), &self.params.amp_envelopes());
             // 左右で値が違う。`enumerate` の 0 が左、1 が右。
             for (channel, channel_sample) in channel_samples.into_iter().enumerate() {
                 *channel_sample = if channel == 0 { left } else { right };

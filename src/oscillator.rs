@@ -57,17 +57,25 @@ pub struct OscParams {
 }
 
 impl OscParams {
-    /// `on` だけ初期値が基ごとに違う。他のノブは同じ。
-    pub fn new(on: bool) -> Self {
+    /// `part` は A、B、C、D。一覧にグループ名が出ないホストでも、どの列か分かる。
+    pub fn new(part: char, on: bool) -> Self {
+        let name = |label: &str| format!("{part} {label}");
         Self {
-            on: BoolParam::new("On", on),
-            octave: IntParam::new("Octave", 0, IntRange::Linear { min: -2, max: 2 }),
-            note: IntParam::new("Note", 0, IntRange::Linear { min: -24, max: 24 }),
-            fine: FloatParam::new("Fine", 0.0, FloatRange::Linear { min: -100.0, max: 100.0 })
-                .with_smoother(SmoothingStyle::Linear(10.0))
-                .with_unit(" cents"),
+            on: BoolParam::new(name("On"), on),
+            octave: IntParam::new(name("Octave"), 0, IntRange::Linear { min: -2, max: 2 }),
+            note: IntParam::new(name("Note"), 0, IntRange::Linear { min: -24, max: 24 }),
+            fine: FloatParam::new(
+                name("Fine"),
+                0.0,
+                FloatRange::Linear {
+                    min: -100.0,
+                    max: 100.0,
+                },
+            )
+            .with_smoother(SmoothingStyle::Linear(10.0))
+            .with_unit(" cents"),
             volume: FloatParam::new(
-                "Volume",
+                name("Volume"),
                 0.0,
                 FloatRange::Linear {
                     min: -60.0,
@@ -76,25 +84,47 @@ impl OscParams {
             )
             .with_smoother(SmoothingStyle::Linear(10.0))
             .with_unit(" dB"),
-            pan: FloatParam::new("Pan", 0.0, FloatRange::Linear { min: -1.0, max: 1.0 })
-                .with_smoother(SmoothingStyle::Linear(10.0)),
-            stereo: FloatParam::new("Stereo", 0.0, FloatRange::Linear { min: 0.0, max: 1.0 })
-                .with_smoother(SmoothingStyle::Linear(10.0)),
-            wave: EnumParam::new("Wave", ClassicWave::Sine),
-            phase: FloatParam::new("Phase", 0.0, FloatRange::Linear { min: 0.0, max: 1.0 }),
-            inv: BoolParam::new("Inv", false),
-            retrigger: BoolParam::new("Retrigger", true),
-            voices: IntParam::new("Voices", 1, IntRange::Linear { min: 1, max: 16 }),
-            detune: FloatParam::new("Detune", 0.0, FloatRange::Linear { min: 0.0, max: 100.0 })
-                .with_smoother(SmoothingStyle::Linear(10.0))
-                .with_unit(" cents"),
+            pan: FloatParam::new(
+                name("Pan"),
+                0.0,
+                FloatRange::Linear {
+                    min: -1.0,
+                    max: 1.0,
+                },
+            )
+            .with_smoother(SmoothingStyle::Linear(10.0)),
+            stereo: FloatParam::new(
+                name("Stereo"),
+                0.0,
+                FloatRange::Linear { min: 0.0, max: 1.0 },
+            )
+            .with_smoother(SmoothingStyle::Linear(10.0)),
+            wave: EnumParam::new(name("Wave"), ClassicWave::Sine),
+            phase: FloatParam::new(
+                name("Phase"),
+                0.0,
+                FloatRange::Linear { min: 0.0, max: 1.0 },
+            ),
+            inv: BoolParam::new(name("Inv"), false),
+            retrigger: BoolParam::new(name("Retrigger"), false),
+            voices: IntParam::new(name("Voices"), 1, IntRange::Linear { min: 1, max: 16 }),
+            detune: FloatParam::new(
+                name("Detune"),
+                0.0,
+                FloatRange::Linear {
+                    min: 0.0,
+                    max: 100.0,
+                },
+            )
+            .with_smoother(SmoothingStyle::Linear(10.0))
+            .with_unit(" cents"),
         }
     }
 }
 
 impl Default for OscParams {
     fn default() -> Self {
-        Self::new(false)
+        Self::new('A', false)
     }
 }
 
@@ -168,7 +198,8 @@ impl Oscillator {
             let cents = unison_cents(index, voices, detune);
             let frequency = base_hz * cents_to_ratio(cents);
             let sample = read_wave(wave, bank, self.phases[index], frequency) * invert;
-            self.phases[index] = self.phases[index].wrapping_add(phase_step(frequency, sample_rate));
+            self.phases[index] =
+                self.phases[index].wrapping_add(phase_step(frequency, sample_rate));
 
             let spread = unison_offset(index, voices);
             let voice_pan = (pan + stereo * spread).clamp(-1.0, 1.0);
@@ -224,7 +255,11 @@ fn equal_power_pan(pan: f32) -> (f32, f32) {
 }
 
 fn finite_or_zero(sample: f32) -> f32 {
-    if sample.is_finite() { sample } else { 0.0 }
+    if sample.is_finite() {
+        sample
+    } else {
+        0.0
+    }
 }
 
 #[cfg(test)]

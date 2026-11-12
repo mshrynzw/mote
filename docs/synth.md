@@ -6,7 +6,7 @@ Phase の範囲、完了条件、計算方式は [design.md](design.md) を優�
 
 ## 信号の流れ
 
-Oscillator 1〜4 は、それぞれ自分の Filter と Amp Env を通り、Master で合流する。Filter Env 1〜4 は、同じ番号の Filter の Cutoff だけを動かす。Mod Env 1〜4 と LFO 1〜4 は、Oscillator、Filter、Amp Env のすべてに割り当てられる。
+Oscillator 1〜4 は、Unison を混ぜたあと、自分の Filter を 2 基通って Amp Env に入り、Master で合流する。2 基は直列か並列でつなぎ、Oscillator の Balance がどちらへどれだけ出すかを決める。初期状態では 2 基目がオフなので、1 基だけを通る。Filter Env は列ごとに 2 基で、それぞれ自分の Filter の Cutoff だけを動かす。2 基を同じだけ動かすときは、Mod Env か LFO の Cutoff を使う。Mod Env 1〜4 と LFO 1〜4 は、Oscillator、Filter、Amp Env のすべてに割り当てられる。Cutoff と Resonance は、届いた列の 2 基を同じだけ動かす。この 2 基目の音は Phase 5 で鳴らし、それまでは 1 基目だけが鳴る。
 
 ## Main のタブ
 
@@ -38,6 +38,12 @@ Master、Mod Env、LFO はタブの外に残し、どのタブでも見える。
 - Pan
 - Stereo
 
+### Balance
+
+Filter が 2 基ともオンのとき、Oscillator がどちらへどれだけ出すかを決める。初期値は -100%。範囲は -100% から +100%。マイナス側は 1 基目、プラス側は 2 基目で、0 は半分ずつである。片方だけがオンのときは、このノブに関係なく、オンの方へ全量を入れる。両方オフのときは、Filter を通さず Amp Env へ進む。Filter の Sync ではコピーしない。
+
+- Balance
+
 ### Wave
 
 最初に実装するのは Classic だけである。Classic は、サイン、三角、ノコギリ、パルスを計算で出す。Stacked Saw と Wavetable は名前だけ残し、Classic が鳴ってから別の作業にする。Stacked Saw は 1 基の中でノコギリを重ねる。Wavetable は、作っておいた 1 周期の波を読み替える。
@@ -56,12 +62,18 @@ Detune の単位はセント。初期値 0。範囲は 0 から 100。最大の�
 - Voices
 - Detune
 
-## Filter（1〜4 共通）
+## Filter（各列に 2 基）
 
-4基とも音の項目は同じである。揃えるスイッチは A にだけ置く。A の Sync をオンにしたあと、Sync B、Sync C、Sync D で揃える列を選ぶ。複数を同時に選べる。ある列を対象にした瞬間、その列のノブは A の値で上書きされる。揃っているあいだ、A と対象の列のどちらを動かしても、揃っている列は同じ値になる。Sync をオフにすると揃えるのをやめ、対象だった列には、そのとき A に出ていた値を残す。再びオンにしたとき、まだ選ばれている列はもう一度 A の値で上書きされる。
+各 Oscillator は、Unison を混ぜたあとに Filter を 2 つ持つ。表示は A1 Type、A2 Cutoff のように、列の文字と基の番号を付ける。1 基目の On の初期値はオン、2 基目はオフである。オフの基は計算しない。Route は並列か直列かで、初期値は並列である。
 
-Type の初期値は Lowpass。Lowpass、Highpass、Bandpass、Notch から選ぶ。Cutoff は 20 Hz から 20 kHz、初期値は 20 kHz。低い周波数の方がノブの動きが大きい。Resonance、Drive、Amount は 0% から 100%、初期値は 0%。Resonance を上げると Cutoff 付近の山が立つ。自己発振はしない。Drive はフィルターのあとで tanh により歪ませる。Amount は MIDI ノート 60 を基準に、鍵盤の高さで Cutoff を追う。100% のとき、1 オクターブ上がると Cutoff は 2 倍になる。この計算はノブへ書き戻さない。フィルターと Drive は 2 倍のオーバーサンプリングで計算する。
+並列では、Balance の割合で 2 基へ分け、出た音を足す。0 のときは半分ずつなので、両方を素通りした音量は 1 基のときと変わらない。直列では、Oscillator は必ず 1 基目に入り、その出力が 2 基目に入る。Balance は、1 基目を出た音と 2 基目を出た音のどちらを聴くかを決める。マイナス側の端では 2 基目を計算しない。
 
+Type、Cutoff、Resonance、Drive、Amount は基ごとに持つ。Type の初期値は Lowpass。Lowpass、Highpass、Bandpass、Notch から選ぶ。Cutoff は 20 Hz から 20 kHz、初期値は 20 kHz。低い周波数の方がノブの動きが大きい。Resonance、Drive、Amount は 0% から 100%、初期値は 0%。Resonance を上げると Cutoff 付近の山が立つ。自己発振はしない。Drive は、その基のフィルターのあとで tanh により歪ませる。Amount は MIDI ノート 60 を基準に、鍵盤の高さでその基の Cutoff を追う。100% のとき、1 オクターブ上がると Cutoff は 2 倍になる。この計算はノブへ書き戻さない。2 基がオンのときは、分けたあとのフィルターと Drive をまとめて 2 倍でオーバーサンプリングする。
+
+揃えるスイッチは、列の A にだけ置く。A の Sync をオンにしたあと、Sync B、Sync C、Sync D で揃える列を選ぶ。複数を同時に選べる。ある列を対象にした瞬間、その列の 2 基と Route は A の値で上書きされる。揃っているあいだ、A と対象の列のどちらを動かしても、揃っている列は同じ値になる。Sync をオフにすると揃えるのをやめ、対象だった列には、そのとき A に出ていた値を残す。再びオンにしたとき、まだ選ばれている列はもう一度 A の値で上書きされる。Balance は Oscillator 側なので、ここには含まない。
+
+- On
+- Route
 - Type
 - Amount
 - Drive
@@ -93,11 +105,13 @@ Attack、Decay、Release の初期値は 0 秒、0.3 秒、0.05 秒。範囲は 
 - Sync C
 - Sync D
 
-## Filter Env（1〜4 共通）
+## Filter Env（各列に 2 基）
 
-4基とも音の項目は同じである。揃えるスイッチは A にだけ置く。A の Sync をオンにしたあと、Sync B、Sync C、Sync D で揃える列を選ぶ。複数を同時に選べる。ある列を対象にした瞬間、その列のノブは A の値で上書きされる。揃っているあいだ、A と対象の列のどちらを動かしても、揃っている列は同じ値になる。Sync をオフにすると揃えるのをやめ、対象だった列には、そのとき A に出ていた値を残す。再びオンにしたとき、まだ選ばれている列はもう一度 A の値で上書きされる。
+各列に 2 基置く。表示は A1 Attack、A2 Amount のように、列の文字と Filter の番号を付ける。Filter Env A1 は Filter A1 の Cutoff だけを動かし、A2 は Filter A2 の Cutoff だけを動かす。B、C、D も同じ対応にする。2 基の Cutoff を同じだけ動かすときは、Mod Env か LFO の Cutoff を使う。
 
-Filter Env A は Filter A の Cutoff だけを動かし、B、C、D も同じ対応にする。時間と Curve は Amp Env と同じで、初期値も 0 秒、0.3 秒、1、0.05 秒、Curve は 0 である。Amount は -100% から +100%、初期値は 0%。0% のあいだ Cutoff は動かない。プラスではエンベロープが上がるほど Cutoff が上がり、100% で頂点のとき 4 オクターブ上がる。マイナスでは同じ幅だけ下がる。動いた Cutoff はノブへ書き戻さない。
+揃えるスイッチは、列の A にだけ置く。A の Sync をオンにしたあと、Sync B、Sync C、Sync D で揃える列を選ぶ。複数を同時に選べる。ある列を対象にした瞬間、その列の 2 基は A の値で上書きされる。揃っているあいだ、A と対象の列のどちらを動かしても、揃っている列は同じ値になる。Sync をオフにすると揃えるのをやめ、対象だった列には、そのとき A に出ていた値を残す。再びオンにしたとき、まだ選ばれている列はもう一度 A の値で上書きされる。
+
+時間と Curve は Amp Env と同じで、初期値も 0 秒、0.3 秒、1、0.05 秒、Curve は 0 である。Amount は -100% から +100%、初期値は 0%。0% のあいだ Cutoff は動かない。プラスではエンベロープが上がるほど Cutoff が上がり、100% で頂点のとき 4 オクターブ上がる。マイナスでは同じ幅だけ下がる。動いた Cutoff はノブへ書き戻さない。
 
 - Attack
 - Attack Curve
@@ -117,7 +131,7 @@ Filter Env A は Filter A の Cutoff だけを動かし、B、C、D も同じ対
 
 4基とも音の項目は同じである。揃えるスイッチは A にだけ置く。A の Sync をオンにしたあと、Sync B、Sync C、Sync D で揃える列を選ぶ。複数を同時に選べる。ある列を対象にした瞬間、その列のノブは A の値で上書きされる。揃っているあいだ、A と対象の列のどちらを動かしても、揃っている列は同じ値になる。Sync をオフにすると揃えるのをやめ、対象だった列には、そのとき A に出ていた値を残す。再びオンにしたとき、まだ選ばれている列はもう一度 A の値で上書きされる。
 
-割り当て先は Oscillator、Filter、Amp Env の各設定である。時間と Curve は Amp Env と同じで、初期値も 0 秒、0.3 秒、1、0.05 秒、Curve は 0 である。Amount は -100% から +100%、初期値は 0%。0% では割り当て先を動かさない。各基は Target と Chain を持つ。Target の初期値は Off。Chain の初期値は All で、All、A、B、C、D から選ぶ。Off のあいだ音は変わらない。Amount 100% のとき、Pitch は ±24 半音、Volume は ±12 dB、Pan は左右いっぱい、Cutoff は ±4 オクターブ、Resonance は ±100%、Amp は Amp Env のあとで無音から 2 倍まで。Chain が All のときは、そのノートでオンの列すべてに届く。複数の Mod Env と LFO が同じ行き先に重なったときは足す。On、Wave、Sync、Retrigger、Unison の本数、Master は動かさない。結果はノブへ書き戻さない。
+割り当て先は Oscillator、Filter、Amp Env の各設定である。時間と Curve は Amp Env と同じで、初期値も 0 秒、0.3 秒、1、0.05 秒、Curve は 0 である。Amount は -100% から +100%、初期値は 0%。0% では割り当て先を動かさない。各基は Target と Chain を持つ。Target の初期値は Off。Chain の初期値は All で、All、A、B、C、D から選ぶ。Off のあいだ音は変わらない。Amount 100% のとき、Pitch は ±24 半音、Volume は ±12 dB、Pan は左右いっぱい、Cutoff は ±4 オクターブ、Resonance は ±100%、Amp は Amp Env のあとで無音から 2 倍まで。Cutoff と Resonance は、届いた列の 2 基へ同じ量を足す。Chain が All のときは、そのノートでオンの列すべてに届く。複数の Mod Env と LFO が同じ行き先に重なったときは足す。On、Wave、Sync、Retrigger、Unison の本数、Route、Balance、Master は動かさない。結果はノブへ書き戻さない。
 
 - Attack
 - Attack Curve

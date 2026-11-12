@@ -167,13 +167,17 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
   padding-right: var(--bus);
 }
 .chain, .post { display: flex; flex-wrap: wrap; gap: var(--gap); }
+.post { flex-direction: column; align-items: stretch; width: 100%; }
+.pair { display: flex; flex-wrap: wrap; gap: var(--gap); width: 100%; }
+.pair > .panel { flex: 1 1 300px; }
+.post > .amp { width: 100%; }
 .synth[data-tab="a"] .chain:not([data-chain="a"]),
 .synth[data-tab="b"] .chain:not([data-chain="b"]),
 .synth[data-tab="c"] .chain:not([data-chain="c"]),
 .synth[data-tab="d"] .chain:not([data-chain="d"]) { display: none; }
 .synth:not([data-tab="all"]) .chain {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(240px, 320px);
+  display: flex;
+  flex-direction: column;
   align-items: stretch;
 }
 .synth:not([data-tab="all"]) .chain > .post { grid-column: 1 / -1; }
@@ -424,7 +428,16 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
 .groups { display: flex; flex-wrap: wrap; gap: 10px 6px; }
 .grp { display: flex; flex-direction: column; gap: 4px; }
 .osc .cells { --cols: 4; }
-.synth:not([data-tab="all"]) .osc .uni { display: none; }
+.synth:not([data-tab="all"]) .osc {
+  display: grid;
+  grid-template-columns: minmax(0, max-content) minmax(220px, 1fr);
+  align-items: stretch;
+}
+.osc .draw::before, .osc .draw::after, .osc .draw > h2 { display: none; }
+.osc .draw { min-height: 176px; padding: 10px 8px 8px 12px; background: transparent; box-shadow: none; }
+.synth:not([data-tab="all"]) .osc .uni.wide { display: none; }
+.synth:not([data-tab="all"]) .osc .wave { height: 72px; }
+.synth:not([data-tab="all"]) .osc .uni.lg { min-height: 128px; }
 .osc .grp:has(.menu) .cells { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 6px; }
 .osc .grp:has(.menu) .ctl { width: 44px; }
 .osc .grp:has(.menu) .ctl.menu { width: 84px; }
@@ -509,9 +522,9 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
   white-space: nowrap;
 }
 .route svg { width: 12px; height: 8px; fill: none; stroke: var(--on); stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
-.post > .panel:first-child .cells { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 6px; }
-.post > .panel:first-child .ctl { width: 44px; }
-.post > .panel:first-child .ctl.menu { width: 84px; }
+.pair > .panel:not(.fenv) .cells { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 4px 6px; }
+.pair > .panel:not(.fenv) .ctl { width: 48px; }
+.pair > .panel:not(.fenv) .ctl.menu { width: 84px; }
 .fenv .cells { --cols: 10; }
 .amp .cells { --cols: 8; --cell: 51px; }
 
@@ -682,6 +695,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           <div class="cells">
             <div class="ctl"><i class="k" style="--a:62deg"></i><span>Volume</span></div>
             <div class="ctl"><i class="k bi"></i><span>Pan</span></div>
+            <div class="ctl"><i class="k bi" style="--a:-135deg"></i><span>Balance</span></div>
             <div class="ctl shift"><i class="k" style="--a:-18deg"></i><span>Stereo</span></div>
           </div>
         </div>
@@ -713,24 +727,25 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           </div>
         </div>
       </div>
-    </section>
-    <section class="panel draw" aria-label="Wave and unison">
-      <h2>Wave</h2>
-      <svg class="wave" viewBox="0 0 160 64" aria-hidden="true"><path d=""/></svg>
-      <div class="uni lg" role="img" aria-label="Unison voices: pan runs left to right, detune runs bottom to top">
-        <span class="ax y">Detune</span><span class="ax x">Pan</span>
-        <i style="--px:.9;--py:1;--wx:-1.4px;--wy:1px;--dur:9.5s;--del:-1s"></i>
-        <i style="--px:.3;--py:.667;--wx:1.2px;--wy:-1.2px;--dur:12s;--del:-4s"></i>
-        <i style="--px:.6;--py:.333;--wx:-1px;--wy:-1.2px;--dur:10.5s;--del:-7s"></i>
-        <i style="--px:0;--py:0;--wx:1.4px;--wy:.8px;--dur:13s;--del:-2s"></i>
-        <i style="--px:-.6;--py:-.333;--wx:1px;--wy:1.2px;--dur:11s;--del:-5s"></i>
-        <i style="--px:-.3;--py:-.667;--wx:-1.2px;--wy:1.2px;--dur:9s;--del:-3s"></i>
-        <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
-      </div>
+      <section class="draw" aria-label="Wave and unison">
+        <h2>Wave</h2>
+        <svg class="wave" viewBox="0 0 160 64" aria-hidden="true"><path d=""/></svg>
+        <div class="uni lg" role="img" aria-label="Unison voices: pan runs left to right, detune runs bottom to top">
+          <span class="ax y">Detune</span><span class="ax x">Pan</span>
+          <i style="--px:.9;--py:1;--wx:-1.4px;--wy:1px;--dur:9.5s;--del:-1s"></i>
+          <i style="--px:.3;--py:.667;--wx:1.2px;--wy:-1.2px;--dur:12s;--del:-4s"></i>
+          <i style="--px:.6;--py:.333;--wx:-1px;--wy:-1.2px;--dur:10.5s;--del:-7s"></i>
+          <i style="--px:0;--py:0;--wx:1.4px;--wy:.8px;--dur:13s;--del:-2s"></i>
+          <i style="--px:-.6;--py:-.333;--wx:1px;--wy:1.2px;--dur:11s;--del:-5s"></i>
+          <i style="--px:-.3;--py:-.667;--wx:-1.2px;--wy:1.2px;--dur:9s;--del:-3s"></i>
+          <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
+        </div>
+      </section>
     </section>
     <div class="post">
+      <div class="pair">
       <section class="panel">
-        <h2>Filter A</h2>
+        <h2>Filter A1</h2>
         <div class="syncs" aria-label="Link from A">
           <span class="sync"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
           <span class="sync" title="Sync B">B</span>
@@ -739,6 +754,8 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
         </div>
         <svg class="response" viewBox="0 0 160 48" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
         <div class="cells">
+          <div class="ctl"><i class="t on"></i><span>On</span></div>
+          <div class="ctl menu"><select class="pick" aria-label="Route"><option value="parallel" selected>Parallel</option><option value="serial">Serial</option></select><span>Route</span></div>
           <div class="ctl menu"><select class="pick" data-kind="filter" aria-label="Type"><option value="lowpass" selected>Lowpass</option><option value="highpass">Highpass</option><option value="bandpass">Bandpass</option><option value="notch">Notch</option></select><span>Type</span></div>
           <div class="ctl"><i class="k" style="--a:27deg"></i><span>Amount</span></div>
           <div class="ctl"><i class="k" style="--a:-68deg"></i><span>Drive</span></div>
@@ -747,14 +764,14 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
         </div>
       </section>
       <section class="panel fenv">
-        <h2>Filter Env A</h2>
+        <h2>Filter Env A1</h2>
         <div class="syncs" aria-label="Link from A">
           <span class="sync"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
           <span class="sync" title="Sync B">B</span>
           <span class="sync" title="Sync C">C</span>
           <span class="sync" title="Sync D">D</span>
         </div>
-        <p class="route"><svg aria-hidden="true"><use href="#ar"/></svg>Filter A Cutoff</p>
+        <p class="route"><svg aria-hidden="true"><use href="#ar"/></svg>Filter A1 Cutoff</p>
         <svg class="env-lg" viewBox="0 0 160 64" aria-hidden="true"><use href="#adsr"/></svg>
         <div class="cells">
           <div class="ctl"><i class="k" style="--a:-118deg"></i><span>Attack</span></div>
@@ -768,6 +785,37 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           <div class="ctl"><i class="k" style="--a:48deg"></i><span>Amount</span></div>
         </div>
       </section>
+      </div>
+      <div class="pair">
+      <section class="panel">
+        <h2>Filter A2</h2>
+        <svg class="response" viewBox="0 0 160 48" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
+        <div class="cells">
+          <div class="ctl"><i class="t"></i><span>On</span></div>
+          <div class="ctl menu"><select class="pick" data-kind="filter" aria-label="Type"><option value="lowpass" selected>Lowpass</option><option value="highpass">Highpass</option><option value="bandpass">Bandpass</option><option value="notch">Notch</option></select><span>Type</span></div>
+          <div class="ctl"><i class="k" style="--a:27deg"></i><span>Amount</span></div>
+          <div class="ctl"><i class="k" style="--a:-68deg"></i><span>Drive</span></div>
+          <div class="ctl"><i class="k live" style="--a:135deg"></i><span>Cutoff</span></div>
+          <div class="ctl"><i class="k live" style="--a:-135deg"></i><span>Resonance</span></div>
+        </div>
+      </section>
+      <section class="panel fenv">
+        <h2>Filter Env A2</h2>
+        <p class="route"><svg aria-hidden="true"><use href="#ar"/></svg>Filter A2 Cutoff</p>
+        <svg class="env-lg" viewBox="0 0 160 64" aria-hidden="true"><use href="#adsr"/></svg>
+        <div class="cells">
+          <div class="ctl"><i class="k" style="--a:-118deg"></i><span>Attack</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
+          <div class="ctl"><i class="k" style="--a:-28deg"></i><span>Decay</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Decay<br>Curve</span></div>
+          <div class="ctl"><i class="k" style="--a:36deg"></i><span>Sustain</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Sustain<br>Curve</span></div>
+          <div class="ctl"><i class="k" style="--a:-58deg"></i><span>Release</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Release<br>Curve</span></div>
+          <div class="ctl"><i class="k" style="--a:48deg"></i><span>Amount</span></div>
+        </div>
+      </section>
+      </div>
       <section class="panel amp">
         <h2>Amp Env A</h2>
         <div class="syncs" aria-label="Link from A">
@@ -809,6 +857,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           <div class="cells">
             <div class="ctl"><i class="k" style="--a:62deg"></i><span>Volume</span></div>
             <div class="ctl"><i class="k bi"></i><span>Pan</span></div>
+            <div class="ctl"><i class="k bi" style="--a:-135deg"></i><span>Balance</span></div>
             <div class="ctl shift"><i class="k" style="--a:-18deg"></i><span>Stereo</span></div>
           </div>
         </div>
@@ -840,26 +889,29 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           </div>
         </div>
       </div>
-    </section>
-    <section class="panel draw" aria-label="Wave and unison">
-      <h2>Wave</h2>
-      <svg class="wave" viewBox="0 0 160 64" aria-hidden="true"><path d=""/></svg>
-      <div class="uni lg" role="img" aria-label="Unison voices: pan runs left to right, detune runs bottom to top">
-        <span class="ax y">Detune</span><span class="ax x">Pan</span>
-        <i style="--px:.9;--py:1;--wx:-1.4px;--wy:1px;--dur:9.5s;--del:-1s"></i>
-        <i style="--px:.3;--py:.667;--wx:1.2px;--wy:-1.2px;--dur:12s;--del:-4s"></i>
-        <i style="--px:.6;--py:.333;--wx:-1px;--wy:-1.2px;--dur:10.5s;--del:-7s"></i>
-        <i style="--px:0;--py:0;--wx:1.4px;--wy:.8px;--dur:13s;--del:-2s"></i>
-        <i style="--px:-.6;--py:-.333;--wx:1px;--wy:1.2px;--dur:11s;--del:-5s"></i>
-        <i style="--px:-.3;--py:-.667;--wx:-1.2px;--wy:1.2px;--dur:9s;--del:-3s"></i>
-        <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
-      </div>
+      <section class="draw" aria-label="Wave and unison">
+        <h2>Wave</h2>
+        <svg class="wave" viewBox="0 0 160 64" aria-hidden="true"><path d=""/></svg>
+        <div class="uni lg" role="img" aria-label="Unison voices: pan runs left to right, detune runs bottom to top">
+          <span class="ax y">Detune</span><span class="ax x">Pan</span>
+          <i style="--px:.9;--py:1;--wx:-1.4px;--wy:1px;--dur:9.5s;--del:-1s"></i>
+          <i style="--px:.3;--py:.667;--wx:1.2px;--wy:-1.2px;--dur:12s;--del:-4s"></i>
+          <i style="--px:.6;--py:.333;--wx:-1px;--wy:-1.2px;--dur:10.5s;--del:-7s"></i>
+          <i style="--px:0;--py:0;--wx:1.4px;--wy:.8px;--dur:13s;--del:-2s"></i>
+          <i style="--px:-.6;--py:-.333;--wx:1px;--wy:1.2px;--dur:11s;--del:-5s"></i>
+          <i style="--px:-.3;--py:-.667;--wx:-1.2px;--wy:1.2px;--dur:9s;--del:-3s"></i>
+          <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
+        </div>
+      </section>
     </section>
     <div class="post">
+      <div class="pair">
       <section class="panel">
-        <h2>Filter B</h2>
+        <h2>Filter B1</h2>
         <svg class="response" viewBox="0 0 160 48" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
         <div class="cells">
+          <div class="ctl"><i class="t on"></i><span>On</span></div>
+          <div class="ctl menu"><select class="pick" aria-label="Route"><option value="parallel" selected>Parallel</option><option value="serial">Serial</option></select><span>Route</span></div>
           <div class="ctl menu"><select class="pick" data-kind="filter" aria-label="Type"><option value="lowpass" selected>Lowpass</option><option value="highpass">Highpass</option><option value="bandpass">Bandpass</option><option value="notch">Notch</option></select><span>Type</span></div>
           <div class="ctl"><i class="k" style="--a:27deg"></i><span>Amount</span></div>
           <div class="ctl"><i class="k" style="--a:-68deg"></i><span>Drive</span></div>
@@ -868,8 +920,8 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
         </div>
       </section>
       <section class="panel fenv">
-        <h2>Filter Env B</h2>
-        <p class="route"><svg aria-hidden="true"><use href="#ar"/></svg>Filter B Cutoff</p>
+        <h2>Filter Env B1</h2>
+        <p class="route"><svg aria-hidden="true"><use href="#ar"/></svg>Filter B1 Cutoff</p>
         <svg class="env-lg" viewBox="0 0 160 64" aria-hidden="true"><use href="#adsr"/></svg>
         <div class="cells">
           <div class="ctl"><i class="k" style="--a:-118deg"></i><span>Attack</span></div>
@@ -883,6 +935,37 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           <div class="ctl"><i class="k" style="--a:48deg"></i><span>Amount</span></div>
         </div>
       </section>
+      </div>
+      <div class="pair">
+      <section class="panel">
+        <h2>Filter B2</h2>
+        <svg class="response" viewBox="0 0 160 48" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
+        <div class="cells">
+          <div class="ctl"><i class="t"></i><span>On</span></div>
+          <div class="ctl menu"><select class="pick" data-kind="filter" aria-label="Type"><option value="lowpass" selected>Lowpass</option><option value="highpass">Highpass</option><option value="bandpass">Bandpass</option><option value="notch">Notch</option></select><span>Type</span></div>
+          <div class="ctl"><i class="k" style="--a:27deg"></i><span>Amount</span></div>
+          <div class="ctl"><i class="k" style="--a:-68deg"></i><span>Drive</span></div>
+          <div class="ctl"><i class="k live" style="--a:135deg"></i><span>Cutoff</span></div>
+          <div class="ctl"><i class="k live" style="--a:-135deg"></i><span>Resonance</span></div>
+        </div>
+      </section>
+      <section class="panel fenv">
+        <h2>Filter Env B2</h2>
+        <p class="route"><svg aria-hidden="true"><use href="#ar"/></svg>Filter B2 Cutoff</p>
+        <svg class="env-lg" viewBox="0 0 160 64" aria-hidden="true"><use href="#adsr"/></svg>
+        <div class="cells">
+          <div class="ctl"><i class="k" style="--a:-118deg"></i><span>Attack</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
+          <div class="ctl"><i class="k" style="--a:-28deg"></i><span>Decay</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Decay<br>Curve</span></div>
+          <div class="ctl"><i class="k" style="--a:36deg"></i><span>Sustain</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Sustain<br>Curve</span></div>
+          <div class="ctl"><i class="k" style="--a:-58deg"></i><span>Release</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Release<br>Curve</span></div>
+          <div class="ctl"><i class="k" style="--a:48deg"></i><span>Amount</span></div>
+        </div>
+      </section>
+      </div>
       <section class="panel amp">
         <h2>Amp Env B</h2>
         <svg class="env-lg" viewBox="0 0 160 64" aria-hidden="true"><use href="#adsr"/></svg>
@@ -918,6 +1001,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           <div class="cells">
             <div class="ctl"><i class="k" style="--a:62deg"></i><span>Volume</span></div>
             <div class="ctl"><i class="k bi"></i><span>Pan</span></div>
+            <div class="ctl"><i class="k bi" style="--a:-135deg"></i><span>Balance</span></div>
             <div class="ctl shift"><i class="k" style="--a:-18deg"></i><span>Stereo</span></div>
           </div>
         </div>
@@ -949,26 +1033,29 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           </div>
         </div>
       </div>
-    </section>
-    <section class="panel draw" aria-label="Wave and unison">
-      <h2>Wave</h2>
-      <svg class="wave" viewBox="0 0 160 64" aria-hidden="true"><path d=""/></svg>
-      <div class="uni lg" role="img" aria-label="Unison voices: pan runs left to right, detune runs bottom to top">
-        <span class="ax y">Detune</span><span class="ax x">Pan</span>
-        <i style="--px:.9;--py:1;--wx:-1.4px;--wy:1px;--dur:9.5s;--del:-1s"></i>
-        <i style="--px:.3;--py:.667;--wx:1.2px;--wy:-1.2px;--dur:12s;--del:-4s"></i>
-        <i style="--px:.6;--py:.333;--wx:-1px;--wy:-1.2px;--dur:10.5s;--del:-7s"></i>
-        <i style="--px:0;--py:0;--wx:1.4px;--wy:.8px;--dur:13s;--del:-2s"></i>
-        <i style="--px:-.6;--py:-.333;--wx:1px;--wy:1.2px;--dur:11s;--del:-5s"></i>
-        <i style="--px:-.3;--py:-.667;--wx:-1.2px;--wy:1.2px;--dur:9s;--del:-3s"></i>
-        <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
-      </div>
+      <section class="draw" aria-label="Wave and unison">
+        <h2>Wave</h2>
+        <svg class="wave" viewBox="0 0 160 64" aria-hidden="true"><path d=""/></svg>
+        <div class="uni lg" role="img" aria-label="Unison voices: pan runs left to right, detune runs bottom to top">
+          <span class="ax y">Detune</span><span class="ax x">Pan</span>
+          <i style="--px:.9;--py:1;--wx:-1.4px;--wy:1px;--dur:9.5s;--del:-1s"></i>
+          <i style="--px:.3;--py:.667;--wx:1.2px;--wy:-1.2px;--dur:12s;--del:-4s"></i>
+          <i style="--px:.6;--py:.333;--wx:-1px;--wy:-1.2px;--dur:10.5s;--del:-7s"></i>
+          <i style="--px:0;--py:0;--wx:1.4px;--wy:.8px;--dur:13s;--del:-2s"></i>
+          <i style="--px:-.6;--py:-.333;--wx:1px;--wy:1.2px;--dur:11s;--del:-5s"></i>
+          <i style="--px:-.3;--py:-.667;--wx:-1.2px;--wy:1.2px;--dur:9s;--del:-3s"></i>
+          <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
+        </div>
+      </section>
     </section>
     <div class="post">
+      <div class="pair">
       <section class="panel">
-        <h2>Filter C</h2>
+        <h2>Filter C1</h2>
         <svg class="response" viewBox="0 0 160 48" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
         <div class="cells">
+          <div class="ctl"><i class="t on"></i><span>On</span></div>
+          <div class="ctl menu"><select class="pick" aria-label="Route"><option value="parallel" selected>Parallel</option><option value="serial">Serial</option></select><span>Route</span></div>
           <div class="ctl menu"><select class="pick" data-kind="filter" aria-label="Type"><option value="lowpass" selected>Lowpass</option><option value="highpass">Highpass</option><option value="bandpass">Bandpass</option><option value="notch">Notch</option></select><span>Type</span></div>
           <div class="ctl"><i class="k" style="--a:27deg"></i><span>Amount</span></div>
           <div class="ctl"><i class="k" style="--a:-68deg"></i><span>Drive</span></div>
@@ -977,8 +1064,8 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
         </div>
       </section>
       <section class="panel fenv">
-        <h2>Filter Env C</h2>
-        <p class="route"><svg aria-hidden="true"><use href="#ar"/></svg>Filter C Cutoff</p>
+        <h2>Filter Env C1</h2>
+        <p class="route"><svg aria-hidden="true"><use href="#ar"/></svg>Filter C1 Cutoff</p>
         <svg class="env-lg" viewBox="0 0 160 64" aria-hidden="true"><use href="#adsr"/></svg>
         <div class="cells">
           <div class="ctl"><i class="k" style="--a:-118deg"></i><span>Attack</span></div>
@@ -992,6 +1079,37 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           <div class="ctl"><i class="k" style="--a:48deg"></i><span>Amount</span></div>
         </div>
       </section>
+      </div>
+      <div class="pair">
+      <section class="panel">
+        <h2>Filter C2</h2>
+        <svg class="response" viewBox="0 0 160 48" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
+        <div class="cells">
+          <div class="ctl"><i class="t"></i><span>On</span></div>
+          <div class="ctl menu"><select class="pick" data-kind="filter" aria-label="Type"><option value="lowpass" selected>Lowpass</option><option value="highpass">Highpass</option><option value="bandpass">Bandpass</option><option value="notch">Notch</option></select><span>Type</span></div>
+          <div class="ctl"><i class="k" style="--a:27deg"></i><span>Amount</span></div>
+          <div class="ctl"><i class="k" style="--a:-68deg"></i><span>Drive</span></div>
+          <div class="ctl"><i class="k live" style="--a:135deg"></i><span>Cutoff</span></div>
+          <div class="ctl"><i class="k live" style="--a:-135deg"></i><span>Resonance</span></div>
+        </div>
+      </section>
+      <section class="panel fenv">
+        <h2>Filter Env C2</h2>
+        <p class="route"><svg aria-hidden="true"><use href="#ar"/></svg>Filter C2 Cutoff</p>
+        <svg class="env-lg" viewBox="0 0 160 64" aria-hidden="true"><use href="#adsr"/></svg>
+        <div class="cells">
+          <div class="ctl"><i class="k" style="--a:-118deg"></i><span>Attack</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
+          <div class="ctl"><i class="k" style="--a:-28deg"></i><span>Decay</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Decay<br>Curve</span></div>
+          <div class="ctl"><i class="k" style="--a:36deg"></i><span>Sustain</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Sustain<br>Curve</span></div>
+          <div class="ctl"><i class="k" style="--a:-58deg"></i><span>Release</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Release<br>Curve</span></div>
+          <div class="ctl"><i class="k" style="--a:48deg"></i><span>Amount</span></div>
+        </div>
+      </section>
+      </div>
       <section class="panel amp">
         <h2>Amp Env C</h2>
         <svg class="env-lg" viewBox="0 0 160 64" aria-hidden="true"><use href="#adsr"/></svg>
@@ -1027,6 +1145,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           <div class="cells">
             <div class="ctl"><i class="k" style="--a:62deg"></i><span>Volume</span></div>
             <div class="ctl"><i class="k bi"></i><span>Pan</span></div>
+            <div class="ctl"><i class="k bi" style="--a:-135deg"></i><span>Balance</span></div>
             <div class="ctl shift"><i class="k" style="--a:-18deg"></i><span>Stereo</span></div>
           </div>
         </div>
@@ -1058,26 +1177,29 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           </div>
         </div>
       </div>
-    </section>
-    <section class="panel draw" aria-label="Wave and unison">
-      <h2>Wave</h2>
-      <svg class="wave" viewBox="0 0 160 64" aria-hidden="true"><path d=""/></svg>
-      <div class="uni lg" role="img" aria-label="Unison voices: pan runs left to right, detune runs bottom to top">
-        <span class="ax y">Detune</span><span class="ax x">Pan</span>
-        <i style="--px:.9;--py:1;--wx:-1.4px;--wy:1px;--dur:9.5s;--del:-1s"></i>
-        <i style="--px:.3;--py:.667;--wx:1.2px;--wy:-1.2px;--dur:12s;--del:-4s"></i>
-        <i style="--px:.6;--py:.333;--wx:-1px;--wy:-1.2px;--dur:10.5s;--del:-7s"></i>
-        <i style="--px:0;--py:0;--wx:1.4px;--wy:.8px;--dur:13s;--del:-2s"></i>
-        <i style="--px:-.6;--py:-.333;--wx:1px;--wy:1.2px;--dur:11s;--del:-5s"></i>
-        <i style="--px:-.3;--py:-.667;--wx:-1.2px;--wy:1.2px;--dur:9s;--del:-3s"></i>
-        <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
-      </div>
+      <section class="draw" aria-label="Wave and unison">
+        <h2>Wave</h2>
+        <svg class="wave" viewBox="0 0 160 64" aria-hidden="true"><path d=""/></svg>
+        <div class="uni lg" role="img" aria-label="Unison voices: pan runs left to right, detune runs bottom to top">
+          <span class="ax y">Detune</span><span class="ax x">Pan</span>
+          <i style="--px:.9;--py:1;--wx:-1.4px;--wy:1px;--dur:9.5s;--del:-1s"></i>
+          <i style="--px:.3;--py:.667;--wx:1.2px;--wy:-1.2px;--dur:12s;--del:-4s"></i>
+          <i style="--px:.6;--py:.333;--wx:-1px;--wy:-1.2px;--dur:10.5s;--del:-7s"></i>
+          <i style="--px:0;--py:0;--wx:1.4px;--wy:.8px;--dur:13s;--del:-2s"></i>
+          <i style="--px:-.6;--py:-.333;--wx:1px;--wy:1.2px;--dur:11s;--del:-5s"></i>
+          <i style="--px:-.3;--py:-.667;--wx:-1.2px;--wy:1.2px;--dur:9s;--del:-3s"></i>
+          <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
+        </div>
+      </section>
     </section>
     <div class="post">
+      <div class="pair">
       <section class="panel">
-        <h2>Filter D</h2>
+        <h2>Filter D1</h2>
         <svg class="response" viewBox="0 0 160 48" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
         <div class="cells">
+          <div class="ctl"><i class="t on"></i><span>On</span></div>
+          <div class="ctl menu"><select class="pick" aria-label="Route"><option value="parallel" selected>Parallel</option><option value="serial">Serial</option></select><span>Route</span></div>
           <div class="ctl menu"><select class="pick" data-kind="filter" aria-label="Type"><option value="lowpass" selected>Lowpass</option><option value="highpass">Highpass</option><option value="bandpass">Bandpass</option><option value="notch">Notch</option></select><span>Type</span></div>
           <div class="ctl"><i class="k" style="--a:27deg"></i><span>Amount</span></div>
           <div class="ctl"><i class="k" style="--a:-68deg"></i><span>Drive</span></div>
@@ -1086,8 +1208,8 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
         </div>
       </section>
       <section class="panel fenv">
-        <h2>Filter Env D</h2>
-        <p class="route"><svg aria-hidden="true"><use href="#ar"/></svg>Filter D Cutoff</p>
+        <h2>Filter Env D1</h2>
+        <p class="route"><svg aria-hidden="true"><use href="#ar"/></svg>Filter D1 Cutoff</p>
         <svg class="env-lg" viewBox="0 0 160 64" aria-hidden="true"><use href="#adsr"/></svg>
         <div class="cells">
           <div class="ctl"><i class="k" style="--a:-118deg"></i><span>Attack</span></div>
@@ -1101,6 +1223,37 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           <div class="ctl"><i class="k" style="--a:48deg"></i><span>Amount</span></div>
         </div>
       </section>
+      </div>
+      <div class="pair">
+      <section class="panel">
+        <h2>Filter D2</h2>
+        <svg class="response" viewBox="0 0 160 48" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
+        <div class="cells">
+          <div class="ctl"><i class="t"></i><span>On</span></div>
+          <div class="ctl menu"><select class="pick" data-kind="filter" aria-label="Type"><option value="lowpass" selected>Lowpass</option><option value="highpass">Highpass</option><option value="bandpass">Bandpass</option><option value="notch">Notch</option></select><span>Type</span></div>
+          <div class="ctl"><i class="k" style="--a:27deg"></i><span>Amount</span></div>
+          <div class="ctl"><i class="k" style="--a:-68deg"></i><span>Drive</span></div>
+          <div class="ctl"><i class="k live" style="--a:135deg"></i><span>Cutoff</span></div>
+          <div class="ctl"><i class="k live" style="--a:-135deg"></i><span>Resonance</span></div>
+        </div>
+      </section>
+      <section class="panel fenv">
+        <h2>Filter Env D2</h2>
+        <p class="route"><svg aria-hidden="true"><use href="#ar"/></svg>Filter D2 Cutoff</p>
+        <svg class="env-lg" viewBox="0 0 160 64" aria-hidden="true"><use href="#adsr"/></svg>
+        <div class="cells">
+          <div class="ctl"><i class="k" style="--a:-118deg"></i><span>Attack</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
+          <div class="ctl"><i class="k" style="--a:-28deg"></i><span>Decay</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Decay<br>Curve</span></div>
+          <div class="ctl"><i class="k" style="--a:36deg"></i><span>Sustain</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Sustain<br>Curve</span></div>
+          <div class="ctl"><i class="k" style="--a:-58deg"></i><span>Release</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Release<br>Curve</span></div>
+          <div class="ctl"><i class="k" style="--a:48deg"></i><span>Amount</span></div>
+        </div>
+      </section>
+      </div>
       <section class="panel amp">
         <h2>Amp Env D</h2>
         <svg class="env-lg" viewBox="0 0 160 64" aria-hidden="true"><use href="#adsr"/></svg>

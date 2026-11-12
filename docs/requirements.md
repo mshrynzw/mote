@@ -17,6 +17,7 @@ Phase が終わったと判断する条件だけを書く。ノブの名前は [
 - Mod Env 4 基と LFO 4 基を、Oscillator、Filter、Amp Env のすべてに割り当てられる
 - 画面はホスト標準のノブでよい。独自の画面と設定の保存は Phase 3 まで入れない
 - Matrix は入れない
+- 各列の Filter の 2 基目、Route、Balance は Phase 5 まで入れない
 
 ## Phase 3
 
@@ -25,3 +26,7 @@ Main、Preset、Setting の見た目を、ブラウザの HTML/CSS で確認し�
 ## Phase 4
 
 Matrix を追加する。行は 1〜4。1 行につきソースを 1 つ、ターゲットを 2 つ持つ。ソースは Mod Env、LFO、Modulation Wheel から選ぶ。ターゲットは Oscillator、Filter、Amp Env、Mod Env、LFO の各設定。
+
+## Phase 5
+
+各列の Filter が 2 基になり、On、Route、Balance が音に反映される。Filter Env は列ごとに 2 基で、それぞれ自分の Filter の Cutoff だけを動かす。1 基目だけをオンにした初期状態では、Phase 2 と同じ音がする。オフの基は計算しない。Mod Env と LFO の Cutoff、Resonance は、その列の 2 基を同じだけ動かす。

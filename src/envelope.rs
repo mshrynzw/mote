@@ -397,7 +397,8 @@ impl AmpParams {
             &hub,
             index,
             AmpKnob::Attack,
-            FloatParam::new(name("Attack"), 0.0, time).with_unit(" s"),
+            // 0 秒だと無音から一気に立ち上がり、発音の頭でクリックする。
+            FloatParam::new(name("Attack"), 0.001, time).with_unit(" s"),
         );
         let attack_curve = follow_float(
             &hub,
@@ -592,13 +593,13 @@ mod tests {
             // Sync がオフのまま B を選んでも、まだ上書きしない。
             let _ = InternalParamMut::_internal_set_plain_value(&amps[0].link_b, true);
         }
-        assert!((amps[1].attack.value() - 0.0).abs() < 1.0e-5);
+        assert!((amps[1].attack.value() - 0.001).abs() < 1.0e-5);
 
         unsafe {
             let _ = InternalParamMut::_internal_set_plain_value(&amps[0].sync, true);
         }
         assert!((amps[1].attack.value() - 1.5).abs() < 1.0e-5);
-        assert!((amps[2].attack.value() - 0.0).abs() < 1.0e-5);
+        assert!((amps[2].attack.value() - 0.001).abs() < 1.0e-5);
 
         unsafe {
             let _ = InternalParamMut::_internal_set_plain_value(&amps[1].decay, 2.5);

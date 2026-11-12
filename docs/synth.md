@@ -90,7 +90,7 @@ Amp Env、Filter Env、Mod Env は、Attack、Decay、Sustain、Release のそ�
 
 4基とも音の項目は同じである。揃えるスイッチは A にだけ置く。A の Sync をオンにしたあと、Sync B、Sync C、Sync D で揃える列を選ぶ。複数を同時に選べる。ある列を対象にした瞬間、その列のノブは A の値で上書きされる。揃っているあいだ、A と対象の列のどちらを動かしても、揃っている列は同じ値になる。Sync をオフにすると揃えるのをやめ、対象だった列には、そのとき A に出ていた値を残す。再びオンにしたとき、まだ選ばれている列はもう一度 A の値で上書きされる。
 
-Attack、Decay、Release の初期値は 0 秒、0.3 秒、0.05 秒。範囲は 0 秒から 10 秒。Sustain の初期値は 1、範囲は 0 から 1。Curve の初期値は 0（直線）、範囲は -1 から +1。-1 は最初が急、+1 は最初が緩やか。
+Attack の初期値は 0.001 秒である。0 秒だと無音から一気に立ち上がり、発音の頭でクリックが聞こえる。Decay、Release の初期値は 0.3 秒、0.05 秒。範囲は 0 秒から 10 秒。Sustain の初期値は 1、範囲は 0 から 1。Curve の初期値は 0（直線）、範囲は -1 から +1。-1 は最初が急、+1 は最初が緩やか。
 
 - Attack
 - Attack Curve
@@ -111,7 +111,7 @@ Attack、Decay、Release の初期値は 0 秒、0.3 秒、0.05 秒。範囲は 
 
 揃えるスイッチは、列の A にだけ置く。A の Sync をオンにしたあと、Sync B、Sync C、Sync D で揃える列を選ぶ。複数を同時に選べる。ある列を対象にした瞬間、その列の 2 基は A の値で上書きされる。揃っているあいだ、A と対象の列のどちらを動かしても、揃っている列は同じ値になる。Sync をオフにすると揃えるのをやめ、対象だった列には、そのとき A に出ていた値を残す。再びオンにしたとき、まだ選ばれている列はもう一度 A の値で上書きされる。
 
-時間と Curve は Amp Env と同じで、初期値も 0 秒、0.3 秒、1、0.05 秒、Curve は 0 である。Amount は -100% から +100%、初期値は 0%。0% のあいだ Cutoff は動かない。プラスではエンベロープが上がるほど Cutoff が上がり、100% で頂点のとき 4 オクターブ上がる。マイナスでは同じ幅だけ下がる。動いた Cutoff はノブへ書き戻さない。
+時間と Curve の範囲は Amp Env と同じである。Attack の初期値は 0 秒、Decay は 0.3 秒、Sustain は 1、Release は 0.05 秒、Curve は 0 である。Amount は -100% から +100%、初期値は 0%。0% のあいだ Cutoff は動かない。プラスではエンベロープが上がるほど Cutoff が上がり、100% で頂点のとき 4 オクターブ上がる。マイナスでは同じ幅だけ下がる。動いた Cutoff はノブへ書き戻さない。
 
 - Attack
 - Attack Curve
@@ -131,7 +131,7 @@ Attack、Decay、Release の初期値は 0 秒、0.3 秒、0.05 秒。範囲は 
 
 4基とも音の項目は同じである。揃えるスイッチは A にだけ置く。A の Sync をオンにしたあと、Sync B、Sync C、Sync D で揃える列を選ぶ。複数を同時に選べる。ある列を対象にした瞬間、その列のノブは A の値で上書きされる。揃っているあいだ、A と対象の列のどちらを動かしても、揃っている列は同じ値になる。Sync をオフにすると揃えるのをやめ、対象だった列には、そのとき A に出ていた値を残す。再びオンにしたとき、まだ選ばれている列はもう一度 A の値で上書きされる。
 
-割り当て先は Oscillator、Filter、Amp Env の各設定である。時間と Curve は Amp Env と同じで、初期値も 0 秒、0.3 秒、1、0.05 秒、Curve は 0 である。Amount は -100% から +100%、初期値は 0%。0% では割り当て先を動かさない。各基は Target と Chain を持つ。Target の初期値は Off。Chain の初期値は All で、All、A、B、C、D から選ぶ。Off のあいだ音は変わらない。Amount 100% のとき、Pitch は ±24 半音、Volume は ±12 dB、Pan は左右いっぱい、Cutoff は ±4 オクターブ、Resonance は ±100%、Amp は Amp Env のあとで無音から 2 倍まで。Cutoff と Resonance は、届いた列の 2 基へ同じ量を足す。Chain が All のときは、そのノートでオンの列すべてに届く。複数の Mod Env と LFO が同じ行き先に重なったときは足す。On、Wave、Sync、Retrigger、Unison の本数、Filter Route、Balance、Master は動かさない。結果はノブへ書き戻さない。
+割り当て先は Oscillator、Filter、Amp Env の各設定である。時間と Curve の範囲は Amp Env と同じである。Attack の初期値は 0 秒、Decay は 0.3 秒、Sustain は 1、Release は 0.05 秒、Curve は 0 である。Amount は -100% から +100%、初期値は 0%。0% では割り当て先を動かさない。各基は Target と Chain を持つ。Target の初期値は Off。Chain の初期値は All で、All、A、B、C、D から選ぶ。Off のあいだ音は変わらない。Amount 100% のとき、Pitch は ±24 半音、Volume は ±12 dB、Pan は左右いっぱい、Cutoff は ±4 オクターブ、Resonance は ±100%、Amp は Amp Env のあとで無音から 2 倍まで。Cutoff と Resonance は、届いた列の 2 基へ同じ量を足す。Chain が All のときは、そのノートでオンの列すべてに届く。複数の Mod Env と LFO が同じ行き先に重なったときは足す。On、Wave、Sync、Retrigger、Unison の本数、Filter Route、Balance、Master は動かさない。結果はノブへ書き戻さない。
 
 - Attack
 - Attack Curve

@@ -10,6 +10,7 @@ use std::num::NonZeroU32;
 // `Arc` は複数の場所から同じ値を共有するポインタ。パラメータをホストとプラグインで共有する。
 use std::sync::Arc;
 
+mod assign;
 mod envelope;
 mod filter;
 mod filter_env;

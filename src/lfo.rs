@@ -10,6 +10,8 @@ use std::sync::Arc;
 use nice_plug::params::InternalParamMut;
 use nice_plug::prelude::*;
 
+use crate::assign::{ModChain, ModTarget};
+
 /// 1 周の波形。並びを変えると、保存した音色の番号がずれる。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Enum)]
 pub enum LfoWave {
@@ -316,6 +318,42 @@ impl LfoSyncHub {
         }
         copy_lfo(lfos[0], lfos[target]);
     }
+
+    fn on_mod_target(&self, index: usize, value: ModTarget) {
+        let Some(_guard) = self.enter() else {
+            return;
+        };
+        let Some(lfos) = self.lfos() else {
+            return;
+        };
+        if !in_link(lfos, index) {
+            return;
+        }
+        for other in 0..4 {
+            if other == index || !in_link(lfos, other) {
+                continue;
+            }
+            set_mod_target(lfos[other], value);
+        }
+    }
+
+    fn on_chain(&self, index: usize, value: ModChain) {
+        let Some(_guard) = self.enter() else {
+            return;
+        };
+        let Some(lfos) = self.lfos() else {
+            return;
+        };
+        if !in_link(lfos, index) {
+            return;
+        }
+        for other in 0..4 {
+            if other == index || !in_link(lfos, other) {
+                continue;
+            }
+            set_chain(lfos[other], value);
+        }
+    }
 }
 
 impl Default for LfoSyncHub {
@@ -378,6 +416,20 @@ fn copy_lfo(from: &LfoParams, to: &LfoParams) {
     for knob in [BoolKnob::Tempo, BoolKnob::Retrigger] {
         set_bool(to, knob, bool_param(from, knob).value());
     }
+    set_mod_target(to, from.target.value());
+    set_chain(to, from.chain.value());
+}
+
+fn set_mod_target(lfo: &LfoParams, value: ModTarget) {
+    unsafe {
+        let _changed = InternalParamMut::_internal_set_plain_value(&lfo.target, value);
+    }
+}
+
+fn set_chain(lfo: &LfoParams, value: ModChain) {
+    unsafe {
+        let _changed = InternalParamMut::_internal_set_plain_value(&lfo.chain, value);
+    }
 }
 
 fn mirror_selected(lfos: [&LfoParams; 4]) {
@@ -435,6 +487,10 @@ pub struct LfoParams {
     pub retrigger: BoolParam,
     #[id = "amount"]
     pub amount: FloatParam,
+    #[id = "target"]
+    pub target: EnumParam<ModTarget>,
+    #[id = "chain"]
+    pub chain: EnumParam<ModChain>,
     #[id = "sync"]
     pub sync: BoolParam,
     #[id = "link_b"]
@@ -501,6 +557,14 @@ impl LfoParams {
             FloatKnob::Amount,
             FloatParam::new(name("Amount"), 0.0, percent).with_unit(" %"),
         );
+        let hub_target = Arc::clone(&hub);
+        let hub_chain = Arc::clone(&hub);
+        let target =
+            EnumParam::new(name("Target"), ModTarget::Off).with_callback(Arc::new(move |value| {
+                hub_target.on_mod_target(index, value)
+            }));
+        let chain = EnumParam::new(name("Chain"), ModChain::All)
+            .with_callback(Arc::new(move |value| hub_chain.on_chain(index, value)));
         let sync = BoolParam::new(name("Sync"), false);
         let link_b = BoolParam::new(name("Sync B"), false);
         let link_c = BoolParam::new(name("Sync C"), false);
@@ -526,6 +590,8 @@ impl LfoParams {
             phase,
             retrigger,
             amount,
+            target,
+            chain,
             sync,
             link_b,
             link_c,

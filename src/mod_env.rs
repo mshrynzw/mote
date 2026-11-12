@@ -9,6 +9,7 @@ use std::sync::Arc;
 use nice_plug::params::InternalParamMut;
 use nice_plug::prelude::*;
 
+use crate::assign::{ModChain, ModTarget};
 use crate::envelope::{AmpEnvelope, AmpSettings};
 
 /// エンベロープの高さと Amount から、割り当て先へ足す割合を返す。100% で高さそのもの。
@@ -153,6 +154,42 @@ impl ModEnvSyncHub {
         }
         copy_env(envs[0], envs[target]);
     }
+
+    fn on_mod_target(&self, index: usize, value: ModTarget) {
+        let Some(_guard) = self.enter() else {
+            return;
+        };
+        let Some(envs) = self.envs() else {
+            return;
+        };
+        if !in_link(envs, index) {
+            return;
+        }
+        for other in 0..4 {
+            if other == index || !in_link(envs, other) {
+                continue;
+            }
+            set_mod_target(envs[other], value);
+        }
+    }
+
+    fn on_chain(&self, index: usize, value: ModChain) {
+        let Some(_guard) = self.enter() else {
+            return;
+        };
+        let Some(envs) = self.envs() else {
+            return;
+        };
+        if !in_link(envs, index) {
+            return;
+        }
+        for other in 0..4 {
+            if other == index || !in_link(envs, other) {
+                continue;
+            }
+            set_chain(envs[other], value);
+        }
+    }
 }
 
 impl Default for ModEnvSyncHub {
@@ -208,6 +245,20 @@ fn copy_env(from: &ModEnvParams, to: &ModEnvParams) {
     ] {
         set_knob(to, which, knob(from, which).unmodulated_plain_value());
     }
+    set_mod_target(to, from.target.value());
+    set_chain(to, from.chain.value());
+}
+
+fn set_mod_target(env: &ModEnvParams, value: ModTarget) {
+    unsafe {
+        let _changed = InternalParamMut::_internal_set_plain_value(&env.target, value);
+    }
+}
+
+fn set_chain(env: &ModEnvParams, value: ModChain) {
+    unsafe {
+        let _changed = InternalParamMut::_internal_set_plain_value(&env.chain, value);
+    }
 }
 
 fn mirror_selected(envs: [&ModEnvParams; 4]) {
@@ -261,6 +312,10 @@ pub struct ModEnvParams {
     pub release_curve: FloatParam,
     #[id = "amount"]
     pub amount: FloatParam,
+    #[id = "target"]
+    pub target: EnumParam<ModTarget>,
+    #[id = "chain"]
+    pub chain: EnumParam<ModChain>,
     #[id = "sync"]
     pub sync: BoolParam,
     #[id = "link_b"]
@@ -347,6 +402,14 @@ impl ModEnvParams {
             EnvKnob::Amount,
             FloatParam::new(name("Amount"), 0.0, percent).with_unit(" %"),
         );
+        let hub_target = Arc::clone(&hub);
+        let hub_chain = Arc::clone(&hub);
+        let target =
+            EnumParam::new(name("Target"), ModTarget::Off).with_callback(Arc::new(move |value| {
+                hub_target.on_mod_target(index, value)
+            }));
+        let chain = EnumParam::new(name("Chain"), ModChain::All)
+            .with_callback(Arc::new(move |value| hub_chain.on_chain(index, value)));
         let sync = BoolParam::new(name("Sync"), false);
         let link_b = BoolParam::new(name("Sync B"), false);
         let link_c = BoolParam::new(name("Sync C"), false);
@@ -375,6 +438,8 @@ impl ModEnvParams {
             release,
             release_curve,
             amount,
+            target,
+            chain,
             sync,
             link_b,
             link_c,

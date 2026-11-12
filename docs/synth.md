@@ -117,7 +117,7 @@ Filter Env A は Filter A の Cutoff だけを動かし、B、C、D も同じ対
 
 4基とも音の項目は同じである。揃えるスイッチは A にだけ置く。A の Sync をオンにしたあと、Sync B、Sync C、Sync D で揃える列を選ぶ。複数を同時に選べる。ある列を対象にした瞬間、その列のノブは A の値で上書きされる。揃っているあいだ、A と対象の列のどちらを動かしても、揃っている列は同じ値になる。Sync をオフにすると揃えるのをやめ、対象だった列には、そのとき A に出ていた値を残す。再びオンにしたとき、まだ選ばれている列はもう一度 A の値で上書きされる。
 
-割り当て先は Oscillator、Filter、Amp Env の各設定である。時間と Curve は Amp Env と同じで、初期値も 0 秒、0.3 秒、1、0.05 秒、Curve は 0 である。Amount は -100% から +100%、初期値は 0%。0% では割り当て先を動かさない。どのノブへ足すかは、LFO のあとの割り当てで決める。それまでは音は変わらない。
+割り当て先は Oscillator、Filter、Amp Env の各設定である。時間と Curve は Amp Env と同じで、初期値も 0 秒、0.3 秒、1、0.05 秒、Curve は 0 である。Amount は -100% から +100%、初期値は 0%。0% では割り当て先を動かさない。各基は Target と Chain を持つ。Target の初期値は Off。Chain の初期値は All で、All、A、B、C、D から選ぶ。Off のあいだ音は変わらない。Amount 100% のとき、Pitch は ±24 半音、Volume は ±12 dB、Pan は左右いっぱい、Cutoff は ±4 オクターブ、Resonance は ±100%、Amp は Amp Env のあとで無音から 2 倍まで。Chain が All のときは、そのノートでオンの列すべてに届く。複数の Mod Env と LFO が同じ行き先に重なったときは足す。On、Wave、Sync、Retrigger、Unison の本数、Master は動かさない。結果はノブへ書き戻さない。
 
 - Attack
 - Attack Curve
@@ -128,6 +128,8 @@ Filter Env A は Filter A の Cutoff だけを動かし、B、C、D も同じ対
 - Release
 - Release Curve
 - Amount
+- Target
+- Chain
 - Sync
 - Sync B
 - Sync C
@@ -135,7 +137,7 @@ Filter Env A は Filter A の Cutoff だけを動かし、B、C、D も同じ対
 
 ## LFO（1〜4 共通）
 
-4基とも音の項目は同じである。揃えるスイッチは A にだけ置く。A の Sync をオンにしたあと、Sync B、Sync C、Sync D で揃える列を選ぶ。複数を同時に選べる。ある列を対象にした瞬間、その列のノブは A の値で上書きされる。揃っているあいだ、A と対象の列のどちらを動かしても、揃っている列は同じ値になる。Sync をオフにすると揃えるのをやめ、対象だった列には、そのとき A に出ていた値を残す。再びオンにしたとき、まだ選ばれている列はもう一度 A の値で上書きされる。テンポに合わせるノブは Tempo と表示し、揃える Sync と混同しない。割り当て先は Oscillator、Filter、Amp Env の各設定である。どのノブへ足すかは、このあとの割り当てで決める。それまでは音は変わらない。
+4基とも音の項目は同じである。揃えるスイッチは A にだけ置く。A の Sync をオンにしたあと、Sync B、Sync C、Sync D で揃える列を選ぶ。複数を同時に選べる。ある列を対象にした瞬間、その列のノブは A の値で上書きされる。揃っているあいだ、A と対象の列のどちらを動かしても、揃っている列は同じ値になる。Sync をオフにすると揃えるのをやめ、対象だった列には、そのとき A に出ていた値を残す。再びオンにしたとき、まだ選ばれている列はもう一度 A の値で上書きされる。テンポに合わせるノブは Tempo と表示し、揃える Sync と混同しない。割り当て先は Oscillator、Filter、Amp Env の各設定である。割り当ては Mod Env と同じ Target と Chain を使う。Target の初期値は Off、Chain の初期値は All である。
 
 Wave は Sine、Triangle、Saw、Square、Sample & Hold。初期値は Sine。Rate は 0.01 Hz から 20 Hz、初期値は 1 Hz。遅い方が細かく動く。Tempo の初期値はオフ。オフのとき Rate は Hz。オンのとき同じノブ位置が音符の長さになり、一覧の表示も Hz ではなく 1/4 のような音符名になる。初期位置の 1 Hz は 4 分音符になる。長さは遅い順に、1 小節、付点 2 分、2 分、付点 4 分、4 分、付点 8 分、4 分三連、8 分、8 分三連、16 分、16 分三連、32 分。テンポは DAW の BPM を使い、取れないときは 120。1 小節の拍数は拍子の分子、無いときは 4。Phase は 0 から 1、初期値は 0。Retrigger の初期値はオフ。オフでは 4 基が自由に回り、鳴っているノートは同じ位相を読む。オンではノートごとに Phase から打ち直す。Amount は -100% から +100%、初期値は 0%。マイナスは波の上下を逆にする。Curve は付けない。
 
@@ -145,6 +147,8 @@ Wave は Sine、Triangle、Saw、Square、Sample & Hold。初期値は Sine。Ra
 - Phase
 - Retrigger
 - Amount
+- Target
+- Chain
 - Sync
 - Sync B
 - Sync C

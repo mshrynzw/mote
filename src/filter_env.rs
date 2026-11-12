@@ -494,8 +494,25 @@ mod tests {
         for i in 0..4_096 {
             let sample = (phase * std::f32::consts::TAU).sin();
             phase = (phase + 800.0 / 48_000.0) % 1.0;
-            let (low, _) = closed.next_sample(&params, sample, sample, Some(60.0), 48_000.0, 0.0);
-            let (high, _) = open.next_sample(&params, sample, sample, Some(60.0), 48_000.0, 4.0);
+            let (low, _) = closed.next_sample(
+                &params,
+                sample,
+                sample,
+                Some(60.0),
+                48_000.0,
+                crate::filter::FilterTouch::default(),
+            );
+            let (high, _) = open.next_sample(
+                &params,
+                sample,
+                sample,
+                Some(60.0),
+                48_000.0,
+                crate::filter::FilterTouch {
+                    octaves: 4.0,
+                    resonance: 0.0,
+                },
+            );
             if i > 3_000 {
                 closed_peak = closed_peak.max(low.abs());
                 open_peak = open_peak.max(high.abs());

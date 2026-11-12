@@ -11,6 +11,14 @@ use crate::wavetable::{TableShape, WaveBank};
 
 pub const MAX_UNISON: usize = 16;
 
+/// 割り当てがオシレーターへ足す分。0 ならノブどおり。
+#[derive(Clone, Copy, Debug, Default)]
+pub struct OscTouch {
+    pub pitch_semitones: f32,
+    pub volume_db: f32,
+    pub pan: f32,
+}
+
 /// Classic で選べる波形。並びを変えると、保存した音色の番号がずれる。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Enum)]
 pub enum ClassicWave {
@@ -161,12 +169,14 @@ impl Oscillator {
     }
 
     /// 左右のサンプルを 1 つ返す。鳴っていないときは `(0, 0)` だが、ノブの追従は進める。
+    /// `touch` は割り当てからの足し分で、ノブには書き戻さない。
     pub fn next_sample(
         &mut self,
         params: &OscParams,
         bank: &WaveBank,
         midi_note: Option<f32>,
         sample_rate: f32,
+        touch: OscTouch,
     ) -> (f32, f32) {
         // `smoothed.next` は 1 サンプルにつき 1 回だけ呼ぶ。呼ばないとノブの動きが遅れる。
         let fine = params.fine.smoothed.next();
@@ -189,8 +199,8 @@ impl Oscillator {
         let voices = (params.voices.value() as usize).clamp(1, MAX_UNISON);
         let wave = params.wave.value();
         let invert = if params.inv.value() { -1.0 } else { 1.0 };
-        let gain = nice_plug::util::db_to_gain(volume_db) / voices as f32;
-        let base_hz = note_frequency(note, pitch_cents);
+        let gain = nice_plug::util::db_to_gain(volume_db + touch.volume_db) / voices as f32;
+        let base_hz = note_frequency(note + touch.pitch_semitones, pitch_cents);
 
         let mut left = 0.0;
         let mut right = 0.0;
@@ -202,7 +212,7 @@ impl Oscillator {
                 self.phases[index].wrapping_add(phase_step(frequency, sample_rate));
 
             let spread = unison_offset(index, voices);
-            let voice_pan = (pan + stereo * spread).clamp(-1.0, 1.0);
+            let voice_pan = (pan + touch.pan + stereo * spread).clamp(-1.0, 1.0);
             let (pan_left, pan_right) = equal_power_pan(voice_pan);
             left += sample * pan_left;
             right += sample * pan_right;

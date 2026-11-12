@@ -170,6 +170,13 @@ fn flush(value: f32) -> f32 {
     }
 }
 
+/// Filter Env と割り当てが Cutoff と Resonance へ足す分。
+#[derive(Clone, Copy, Debug, Default)]
+pub struct FilterTouch {
+    pub octaves: f32,
+    pub resonance: f32,
+}
+
 /// MIDI ノート 60 を基準に、Amount の割合だけ Cutoff を上下する。
 pub fn tracked_cutoff(cutoff_hz: f32, note: f32, amount: f32) -> f32 {
     let octaves = (note - 60.0) / 12.0 * amount;
@@ -248,7 +255,7 @@ impl Filter {
     }
 
     /// 左右 1 サンプル。`note` が `None` のときは、基準のノート 60 として Amount を計算する。
-    /// `env_octaves` は Filter Env が足すオクターブ。ノブの Cutoff には書き戻さない。
+    /// `touch.octaves` は Filter Env と割り当てのオクターブ合計。ノブには書き戻さない。
     pub fn next_sample(
         &mut self,
         params: &FilterParams,
@@ -256,7 +263,7 @@ impl Filter {
         right: f32,
         note: Option<f32>,
         sample_rate: f32,
-        env_octaves: f32,
+        touch: FilterTouch,
     ) -> (f32, f32) {
         let sample_rate = sample_rate.max(1.0);
         let amount = (params.amount.value() / 100.0).clamp(0.0, 1.0);
@@ -270,18 +277,24 @@ impl Filter {
             sample_rate,
         )
         .clamp(20.0, sample_rate * 0.9);
-        let env_octaves = if env_octaves.is_finite() {
-            env_octaves
+        let octaves = if touch.octaves.is_finite() {
+            touch.octaves
         } else {
             0.0
         };
-        let cutoff = (base * 2.0f32.powf(env_octaves)).clamp(20.0, sample_rate * 0.9);
-        let resonance = glide(
+        let cutoff = (base * 2.0f32.powf(octaves)).clamp(20.0, sample_rate * 0.9);
+        let resonance_knob = glide(
             &self.resonance,
             &mut self.last_resonance,
             (params.resonance.value() / 100.0).clamp(0.0, 1.0),
             sample_rate,
         );
+        let resonance_add = if touch.resonance.is_finite() {
+            touch.resonance
+        } else {
+            0.0
+        };
+        let resonance = (resonance_knob + resonance_add).clamp(0.0, 1.0);
         let drive = glide(
             &self.drive,
             &mut self.last_drive,
@@ -705,8 +718,14 @@ mod tests {
         for i in 0..4_096 {
             let sample = (phase * std::f32::consts::TAU).sin();
             phase = (phase + step) % 1.0;
-            let (left, right) =
-                filter.next_sample(params, sample, sample, Some(f32::from(note)), 48_000.0, 0.0);
+            let (left, right) = filter.next_sample(
+                params,
+                sample,
+                sample,
+                Some(f32::from(note)),
+                48_000.0,
+                FilterTouch::default(),
+            );
             assert!(left.is_finite() && right.is_finite());
             if i > 3_000 {
                 peak = peak.max(left.abs());
@@ -735,7 +754,14 @@ mod tests {
         let mut last_left = 0.0;
         let mut last_right = 0.0;
         for _ in 0..1_000 {
-            let (left, right) = filter.next_sample(&params, 0.5, -0.25, Some(60.0), 48_000.0, 0.0);
+            let (left, right) = filter.next_sample(
+                &params,
+                0.5,
+                -0.25,
+                Some(60.0),
+                48_000.0,
+                FilterTouch::default(),
+            );
             assert!(left.is_finite() && right.is_finite());
             last_left = left;
             last_right = right;
@@ -814,9 +840,22 @@ mod tests {
         let mut differed = false;
         for i in 0..2_000 {
             let sample = 0.4 * (i as f32 * 440.0 / 48_000.0 * std::f32::consts::TAU).sin();
-            let (left, _) = plain.next_sample(&clean, sample, sample, Some(60.0), 48_000.0, 0.0);
-            let (driven_left, _) =
-                hot.next_sample(&driven, sample, sample, Some(60.0), 48_000.0, 0.0);
+            let (left, _) = plain.next_sample(
+                &clean,
+                sample,
+                sample,
+                Some(60.0),
+                48_000.0,
+                FilterTouch::default(),
+            );
+            let (driven_left, _) = hot.next_sample(
+                &driven,
+                sample,
+                sample,
+                Some(60.0),
+                48_000.0,
+                FilterTouch::default(),
+            );
             assert!(driven_left.is_finite());
             assert!(driven_left.abs() <= 1.01);
             if i > 1_000 && (left - driven_left).abs() > 0.05 {

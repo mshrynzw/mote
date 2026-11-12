@@ -4,12 +4,15 @@
 //! オンのオシレーターは、Unison を混ぜてから自分のフィルターと Amp Env を通る。
 //! 鳴っていないノートと、オフのオシレーターは計算しない。
 
+use crate::assign::{amp_gain, fold, ModSource};
 use crate::envelope::{synced_amp, AmpEnvelope, AmpParams};
+use crate::filter::FilterTouch;
 use crate::filter::{synced_filter, Filter, FilterParams};
 use crate::filter_env::{synced_filter_env, FilterEnv, FilterEnvParams};
 use crate::lfo::{apply_amount, lfo_hz, synced_lfo, LfoParams, LfoPhase};
 use crate::master::{bend_semitones, note_limit, MasterParams, PlayMode};
 use crate::mod_env::{scaled_amount, synced_mod_env, ModEnv, ModEnvParams};
+use crate::oscillator::OscTouch;
 use crate::oscillator::{OscParams, Oscillator};
 use crate::wavetable::WaveBank;
 use nice_plug::prelude::*;
@@ -216,11 +219,19 @@ impl NoteVoice {
             return (0.0, 0.0);
         }
         let sounding = self.glide_note + pitch_semitones;
-        // 割り当て前なので、高さは計算だけして音には足さない。
+        let mut sources = [ModSource {
+            target: crate::assign::ModTarget::Off,
+            chain: crate::assign::ModChain::All,
+            depth: 0.0,
+        }; 8];
         for (index, mod_env) in self.mod_envs.iter_mut().enumerate() {
             let params = synced_mod_env(index, chain.mod_envs);
             let level = mod_env.next(params, self.sample_rate);
-            let _ = scaled_amount(level, params.amount.value());
+            sources[index] = ModSource {
+                target: params.target.value(),
+                chain: params.chain.value(),
+                depth: scaled_amount(level, params.amount.value()),
+            };
         }
         for (index, phase) in self.lfo_phases.iter_mut().enumerate() {
             let lfo = synced_lfo(index, chain.lfos);
@@ -235,9 +246,13 @@ impl NoteVoice {
             } else {
                 free_wave[index]
             };
-            // 割り当て前なので、波は計算だけして音には足さない。
-            let _ = apply_amount(wave, lfo.amount.value());
+            sources[index + 4] = ModSource {
+                target: lfo.target.value(),
+                chain: lfo.chain.value(),
+                depth: apply_amount(wave, lfo.amount.value()),
+            };
         }
+        let columns = fold(&sources);
         let mut left = 0.0;
         let mut right = 0.0;
         let mut active = 0u32;
@@ -249,11 +264,17 @@ impl NoteVoice {
                 continue;
             }
             active += 1;
+            let column = columns[index];
             let (osc_left, osc_right) = self.oscillators[index].next_sample(
                 osc_params,
                 bank,
                 Some(sounding),
                 self.sample_rate,
+                OscTouch {
+                    pitch_semitones: column.pitch,
+                    volume_db: column.volume_db,
+                    pan: column.pan,
+                },
             );
             let env_params = synced_filter_env(index, chain.filter_envs);
             let env_octaves = self.filter_envs[index].next_octaves(env_params, self.sample_rate);
@@ -263,12 +284,16 @@ impl NoteVoice {
                 osc_right,
                 Some(sounding),
                 self.sample_rate,
-                env_octaves,
+                FilterTouch {
+                    octaves: env_octaves + column.cutoff_octaves,
+                    resonance: column.resonance,
+                },
             );
             let env =
                 self.amps[index].next(synced_amp(index, chain.amps).settings(), self.sample_rate);
-            left += filtered_left * env;
-            right += filtered_right * env;
+            let gained = env * amp_gain(column.amp);
+            left += filtered_left * gained;
+            right += filtered_right * gained;
         }
         self.advance_glide();
         if !self.held && self.amps.iter().all(|amp| !amp.is_busy()) {
@@ -972,6 +997,38 @@ mod tests {
         let shut = energy(0.0);
         let open = energy(100.0);
         assert!(open > shut * 2.0, "open {open}, shut {shut}");
+    }
+
+    #[test]
+    fn mod_env_cutoff_opens_chain_a_and_leaves_chain_b() {
+        use crate::assign::{ModChain, ModTarget};
+
+        fn energy(target: ModTarget, chain: ModChain) -> f32 {
+            let mut voices = Voices::new();
+            voices.set_sample_rate(48_000.0);
+            let knobs = params();
+            unsafe {
+                let _ = InternalParamMut::_internal_set_plain_value(&knobs.filter1.cutoff, 200.0);
+                let _ = InternalParamMut::_internal_set_plain_value(&knobs.mod_env1.amount, 100.0);
+                let _ = InternalParamMut::_internal_set_plain_value(&knobs.mod_env1.target, target);
+                let _ = InternalParamMut::_internal_set_plain_value(&knobs.mod_env1.chain, chain);
+            }
+            voices.note_on(69, 1.0, &knobs.oscillators(), &knobs.lfos(), &knobs.master);
+            let mut sum = 0.0;
+            for i in 0..4_000 {
+                let (left, right) = render(&mut voices, &knobs);
+                if i > 2_000 {
+                    sum += left * left + right * right;
+                }
+            }
+            sum
+        }
+
+        let closed = energy(ModTarget::Off, ModChain::All);
+        let opened = energy(ModTarget::Cutoff, ModChain::A);
+        let other = energy(ModTarget::Cutoff, ModChain::B);
+        assert!(opened > closed * 2.0, "opened {opened}, closed {closed}");
+        assert!(other < opened * 0.5, "other {other}, opened {opened}");
     }
 
     #[test]

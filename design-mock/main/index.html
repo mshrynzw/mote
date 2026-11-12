@@ -14,7 +14,10 @@
    On A-D, Mod Env and LFO each keep their own A-D tabs, separate from the chain tab.
    Mood: a soft light hangs above the instrument. Dust motes drift through it, the solid
    panels break it into shafts, and each panel edge catches it on the side that faces it.
-   Narrower than the 1000px artboard, sections wrap; controls never shrink. */
+   Narrower than the artboard, sections wrap; controls never shrink.
+   A-D is 1188px, so the space before Master matches the padding after it.
+   ALL lists the four chains in that same left-to-right order, without the large oscillator drawing.
+   Filter, Filter Env, and Amp Env keep their curves. Master sits under the name. */
 @property --rim { syntax: "<angle>"; inherits: true; initial-value: 330deg; }
 @property --lit { syntax: "<number>"; inherits: true; initial-value: .6; }
 @property --spread { syntax: "<number>"; inherits: true; initial-value: 1; }
@@ -82,7 +85,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
   grid-template-columns: minmax(0, 1fr) var(--side);
   grid-template-areas: "tabs side" "chains side" "mods mods";
   gap: var(--row-gap) 12px;
-  max-width: 1000px;
+  max-width: 1256px;
   margin: 0 auto;
   padding: 15px;
   border-radius: 16px;
@@ -132,8 +135,8 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
 }
 .tabs button.on {
   border-color: var(--on);
-  color: var(--on);
-  box-shadow: 0 0 12px rgb(159 197 233 / .35);
+  background: var(--on);
+  color: rgb(15 24 57);
 }
 .tabs button:focus-visible { outline: 1px solid var(--on); outline-offset: 2px; }
 
@@ -175,13 +178,105 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
 .synth[data-tab="b"] .chain:not([data-chain="b"]),
 .synth[data-tab="c"] .chain:not([data-chain="c"]),
 .synth[data-tab="d"] .chain:not([data-chain="d"]) { display: none; }
+.synth:not([data-tab="all"]) { max-width: 1188px; column-gap: 15px; }
+.synth:not([data-tab="all"]) .chains { padding-right: 0; }
+.synth:not([data-tab="all"]) .chains::after,
+.synth:not([data-tab="all"]) .feed { display: none; }
 .synth:not([data-tab="all"]) .chain {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
   align-items: stretch;
 }
-.synth:not([data-tab="all"]) .chain > .post { grid-column: 1 / -1; }
+.synth:not([data-tab="all"]) .osc { flex: 0 0 auto; }
+.synth:not([data-tab="all"]) .post {
+  flex: 0 1 auto;
+  width: auto;
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: start;
+  align-items: stretch;
+  align-content: start;
+}
+.synth:not([data-tab="all"]) .pair { width: max-content; }
+.synth:not([data-tab="all"]) .pair > .panel:not(.fenv) { flex: 0 0 auto; width: 210px; }
+.synth:not([data-tab="all"]) .pair > .fenv { flex: 0 0 auto; width: 223px; }
+.synth:not([data-tab="all"]) .post > .pair { grid-column: 1; }
+.synth:not([data-tab="all"]) .post > .amp {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  width: auto;
+  align-self: stretch;
+}
 .synth:not([data-tab="all"]) .chain::before { display: none; }
+
+/* ALL: four lanes in the same order as A-D, so the columns can be compared.
+   An oscillator that is off, and a filter that is off, step back. */
+.synth[data-tab="all"] .chain {
+  display: grid;
+  grid-template-columns: 304px max-content max-content;
+  grid-template-rows: auto auto;
+  align-items: stretch;
+  gap: 10px;
+  width: max-content;
+}
+.synth[data-tab="all"] .post { display: contents; }
+.synth[data-tab="all"] .osc {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  width: 304px;
+  min-width: 304px;
+  justify-content: flex-start;
+}
+.synth[data-tab="all"] .osc .top {
+  display: grid;
+  grid-template-columns: 108px minmax(0, 1fr);
+  gap: 8px 10px;
+  width: 100%;
+}
+.synth[data-tab="all"] .osc .grp { min-width: 0; }
+.synth[data-tab="all"] .osc > .grp { width: 100%; }
+.synth[data-tab="all"] .osc > .grp .cells {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  width: 100%;
+}
+.synth[data-tab="all"] .osc > .grp .uni.wide { flex: 1 0 100%; height: 52px; }
+.synth[data-tab="all"] .osc > .grp .uni.wide i { translate: calc(var(--px) * var(--spread) * 110px) calc(var(--py) * var(--spread) * -16px); }
+.synth[data-tab="all"] .post > .pair {
+  grid-column: 2;
+  flex-wrap: nowrap;
+  width: max-content;
+}
+.synth[data-tab="all"] .post > .pair:first-of-type { grid-row: 1; }
+.synth[data-tab="all"] .post > .pair:last-of-type { grid-row: 2; }
+.synth[data-tab="all"] .pair > .panel:not(.fenv) { flex: 0 0 auto; width: 210px; }
+.synth[data-tab="all"] .pair > .fenv { flex: 0 0 auto; width: 223px; }
+.synth[data-tab="all"] .post > .amp {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  width: max-content;
+  align-self: stretch;
+}
+.synth[data-tab="all"] .chain:has(.osc .cells > .ctl:first-child > .t:not(.on)) { opacity: .62; }
+.synth[data-tab="all"] .chain:not(:has(.osc .cells > .ctl:first-child > .t:not(.on))) .pair:has(> .panel:not(.fenv) .cells > .ctl:first-child > .t:not(.on)) { opacity: .62; }
+.synth[data-tab="all"] .chain .panel { justify-content: flex-start; }
+.synth[data-tab="all"] .chain .amp { justify-content: center; }
+.synth[data-tab="all"] {
+  max-width: 1170px;
+  column-gap: 15px;
+  grid-template-areas: "tabs brand" "chains master" "mods mods";
+}
+.synth[data-tab="all"] .brand { grid-area: brand; align-self: start; }
+.synth[data-tab="all"] .master { grid-area: master; align-self: start; }
+.synth[data-tab="all"] .chains { padding-right: 0; }
+.synth[data-tab="all"] .chains::after,
+.synth[data-tab="all"] .chain::before { right: -8px; }
+.synth[data-tab="all"] .feed { left: -15px; width: 15px; }
+.synth[data-tab="all"] .feed::after { left: 14px; }
+.synth[data-tab="all"] .mods .panel { justify-content: flex-start; }
+
 .chain { position: relative; }
 .chain > *, .post > * { flex: 0 1 auto; min-width: 0; }
 
@@ -428,19 +523,35 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
 .groups { display: flex; flex-wrap: wrap; gap: 10px 6px; }
 .grp { display: flex; flex-direction: column; gap: 4px; }
 .osc .cells { --cols: 4; }
+.top { display: flex; flex-wrap: wrap; gap: 10px 6px; }
 .synth:not([data-tab="all"]) .osc {
   display: grid;
-  grid-template-columns: minmax(0, max-content) minmax(220px, 1fr);
-  align-items: stretch;
+  grid-template-columns: 172px 128px;
+  grid-template-rows: auto auto;
+  align-items: start;
+  row-gap: 10px;
 }
+.synth:not([data-tab="all"]) .osc .groups {
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  width: 172px;
+}
+.synth:not([data-tab="all"]) .osc .draw { grid-column: 2; grid-row: 1; width: 128px; min-height: 0; padding: 0; align-self: start; }
+.synth:not([data-tab="all"]) .osc > .grp { grid-column: 2; grid-row: 2; align-self: start; width: 128px; }
+.synth:not([data-tab="all"]) .osc > .grp .cells { display: flex; flex-wrap: nowrap; justify-content: space-between; gap: 4px; width: 128px; }
+.synth:not([data-tab="all"]) .osc > .grp .ctl { flex: 1 1 0; width: auto; }
+.synth:not([data-tab="all"]) .pair { flex-wrap: nowrap; width: max-content; }
 .osc .draw::before, .osc .draw::after, .osc .draw > h2 { display: none; }
-.osc .draw { min-height: 176px; padding: 10px 8px 8px 12px; background: transparent; box-shadow: none; }
+.osc .draw { min-height: 176px; padding: 8px 4px 4px 4px; background: transparent; box-shadow: none; }
 .synth:not([data-tab="all"]) .osc .uni.wide { display: none; }
-.synth:not([data-tab="all"]) .osc .wave { height: 72px; }
-.synth:not([data-tab="all"]) .osc .uni.lg { min-height: 128px; }
-.osc .grp:has(.menu) .cells { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 6px; }
-.osc .grp:has(.menu) .ctl { width: 44px; }
-.osc .grp:has(.menu) .ctl.menu { width: 84px; }
+.synth:not([data-tab="all"]) .osc .wave { height: 56px; }
+.synth:not([data-tab="all"]) .osc .uni.lg { width: 128px; height: 128px; min-height: 0; flex: none; }
+.synth:not([data-tab="all"]) .osc .uni.lg i { translate: calc(var(--px) * var(--spread) * 46px) calc(var(--py) * var(--spread) * -46px); }
+.osc .grp:has(.menu) .cells { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 4px 6px; }
+.osc .grp:has(.menu) .ctl:not(.menu) { width: 44px; }
+.osc .grp:has(.menu) .cells > .break { flex-basis: 100%; height: 0; }
 .gl {
   display: flex;
   align-items: center;
@@ -498,8 +609,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
 .response { display: block; height: 46px; }
 .response .grid { fill: none; stroke: rgb(164 182 183 / .45); stroke-width: 1; }
 .wave { display: block; height: 78px; }
-.env-lg { display: none; height: 56px; }
-.synth:not([data-tab="all"]) .env-lg { display: block; }
+.env-lg { display: block; height: 56px; }
 .plot { display: block; height: 22px; }
 .uni.lg { flex: 1; height: auto; min-height: 112px; }
 .uni.lg i { translate: calc(var(--px) * var(--spread) * 72px) calc(var(--py) * var(--spread) * -40px); }
@@ -522,10 +632,11 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
   white-space: nowrap;
 }
 .route svg { width: 12px; height: 8px; fill: none; stroke: var(--on); stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
-.pair > .panel:not(.fenv) .cells { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 4px 6px; }
+.pair > .panel:not(.fenv) .cells { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 6px; }
 .pair > .panel:not(.fenv) .ctl { width: 48px; }
 .pair > .panel:not(.fenv) .ctl.menu { width: 84px; }
 .fenv .cells { --cols: 10; }
+.amp { justify-content: center; }
 .amp .cells { --cols: 8; --cell: 51px; }
 
 /* ---------- Master ---------- */
@@ -594,12 +705,13 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
   letter-spacing: .08em;
   cursor: pointer;
 }
-.subtabs button.on { border-color: var(--on); color: var(--on); box-shadow: 0 0 12px rgb(159 197 233 / .35); }
+.subtabs button.on { border-color: var(--on); background: var(--on); color: rgb(15 24 57); }
 .subtabs button:focus-visible { outline: 1px solid var(--on); outline-offset: 2px; }
 
 /* ---------- Narrower windows: wrap, never shrink ---------- */
 @container stage (width < 1000px) {
-  .synth {
+  .synth,
+  .synth[data-tab="all"] {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "brand" "tabs" "chains" "master" "mods";
   }
@@ -637,10 +749,28 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
 @container stage (width < 994px) {
   .mods { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+@container stage (width < 1080px) {
+  .synth[data-tab="all"] .chain {
+    grid-template-columns: minmax(0, 1fr);
+    width: auto;
+  }
+  .synth[data-tab="all"] .osc,
+  .synth[data-tab="all"] .post > .pair,
+  .synth[data-tab="all"] .post > .amp {
+    grid-column: 1;
+    grid-row: auto;
+    width: auto;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .synth[data-tab="all"] .pair { flex-wrap: wrap; }
+}
 @container stage (width < 852px) {
   .chains { padding-right: 0; row-gap: 28px; }
   .chain, .post { justify-content: center; }
-  .synth:not([data-tab="all"]) .chain { grid-template-columns: minmax(0, 1fr); }
+  .synth:not([data-tab="all"]) .chain { flex-direction: column; }
+  .synth:not([data-tab="all"]) .post { display: flex; flex-direction: column; width: 100%; }
+  .synth:not([data-tab="all"]) .post > .amp { grid-column: auto; grid-row: auto; width: 100%; }
   .chain::before, .chains::after, .feed { display: none; }
 }
 @container stage (width < 510px) {
@@ -682,6 +812,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
     <section class="panel osc">
       <h2>Oscillator A</h2>
       <div class="groups">
+        <div class="top">
         <div class="grp">
           <h3 class="gl">Pitch</h3>
           <div class="cells">
@@ -696,8 +827,9 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
             <div class="ctl"><i class="k" style="--a:62deg"></i><span>Volume</span></div>
             <div class="ctl"><i class="k bi"></i><span>Pan</span></div>
             <div class="ctl"><i class="k bi" style="--a:-135deg"></i><span>Balance</span></div>
-            <div class="ctl shift"><i class="k" style="--a:-18deg"></i><span>Stereo</span></div>
+            <div class="ctl menu wide"><select class="pick" aria-label="Filter Route"><option value="parallel" selected>Parallel</option><option value="serial">Serial</option></select><span>Filter Route</span></div>
           </div>
+        </div>
         </div>
         <div class="grp">
           <h3 class="gl">Wave</h3>
@@ -705,25 +837,9 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
             <div class="ctl"><i class="t on"></i><span>On</span></div>
             <div class="ctl menu"><select class="pick" data-kind="osc-wave" aria-label="Wave"><option value="sine" selected>Sine</option><option value="triangle">Triangle</option><option value="saw">Saw</option><option value="pulse">Pulse</option></select><span>Wave</span></div>
             <div class="ctl"><i class="k" style="--a:-96deg"></i><span>Phase</span></div>
+            <div class="break"></div>
             <div class="ctl"><i class="t"></i><span>Inv</span></div>
             <div class="ctl"><i class="t"></i><span>Retrigger</span></div>
-          </div>
-        </div>
-        <div class="grp">
-          <h3 class="gl">Unison</h3>
-          <div class="cells">
-            <div class="uni wide" role="img" aria-label="Unison voices: pan runs left to right, detune runs bottom to top">
-              <span class="ax y">Detune</span><span class="ax x">Pan</span>
-              <i style="--px:.9;--py:1;--wx:-1.4px;--wy:1px;--dur:9.5s;--del:-1s"></i>
-              <i style="--px:.3;--py:.667;--wx:1.2px;--wy:-1.2px;--dur:12s;--del:-4s"></i>
-              <i style="--px:.6;--py:.333;--wx:-1px;--wy:-1.2px;--dur:10.5s;--del:-7s"></i>
-              <i style="--px:0;--py:0;--wx:1.4px;--wy:.8px;--dur:13s;--del:-2s"></i>
-              <i style="--px:-.6;--py:-.333;--wx:1px;--wy:1.2px;--dur:11s;--del:-5s"></i>
-              <i style="--px:-.3;--py:-.667;--wx:-1.2px;--wy:1.2px;--dur:9s;--del:-3s"></i>
-              <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
-            </div>
-            <div class="ctl"><i class="k" style="--a:18deg"></i><span>Voices</span></div>
-            <div class="ctl"><i class="k" style="--a:-42deg"></i><span>Detune</span></div>
           </div>
         </div>
       </div>
@@ -741,6 +857,24 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
         </div>
       </section>
+      <div class="grp">
+        <h3 class="gl">Unison</h3>
+        <div class="cells">
+          <div class="uni wide" role="img" aria-label="Unison voices: pan runs left to right, detune runs bottom to top">
+            <span class="ax y">Detune</span><span class="ax x">Pan</span>
+            <i style="--px:.9;--py:1;--wx:-1.4px;--wy:1px;--dur:9.5s;--del:-1s"></i>
+            <i style="--px:.3;--py:.667;--wx:1.2px;--wy:-1.2px;--dur:12s;--del:-4s"></i>
+            <i style="--px:.6;--py:.333;--wx:-1px;--wy:-1.2px;--dur:10.5s;--del:-7s"></i>
+            <i style="--px:0;--py:0;--wx:1.4px;--wy:.8px;--dur:13s;--del:-2s"></i>
+            <i style="--px:-.6;--py:-.333;--wx:1px;--wy:1.2px;--dur:11s;--del:-5s"></i>
+            <i style="--px:-.3;--py:-.667;--wx:-1.2px;--wy:1.2px;--dur:9s;--del:-3s"></i>
+            <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
+          </div>
+          <div class="ctl"><i class="k" style="--a:18deg"></i><span>Voices</span></div>
+          <div class="ctl"><i class="k" style="--a:-42deg"></i><span>Detune</span></div>
+          <div class="ctl"><i class="k" style="--a:-18deg"></i><span>Stereo</span></div>
+        </div>
+      </div>
     </section>
     <div class="post">
       <div class="pair">
@@ -752,10 +886,9 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           <span class="sync" title="Sync C">C</span>
           <span class="sync" title="Sync D">D</span>
         </div>
-        <svg class="response" viewBox="0 0 160 48" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
+        <svg class="response" viewBox="0 0 160 48" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
         <div class="cells">
           <div class="ctl"><i class="t on"></i><span>On</span></div>
-          <div class="ctl menu"><select class="pick" aria-label="Route"><option value="parallel" selected>Parallel</option><option value="serial">Serial</option></select><span>Route</span></div>
           <div class="ctl menu"><select class="pick" data-kind="filter" aria-label="Type"><option value="lowpass" selected>Lowpass</option><option value="highpass">Highpass</option><option value="bandpass">Bandpass</option><option value="notch">Notch</option></select><span>Type</span></div>
           <div class="ctl"><i class="k" style="--a:27deg"></i><span>Amount</span></div>
           <div class="ctl"><i class="k" style="--a:-68deg"></i><span>Drive</span></div>
@@ -789,7 +922,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
       <div class="pair">
       <section class="panel">
         <h2>Filter A2</h2>
-        <svg class="response" viewBox="0 0 160 48" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
+        <svg class="response" viewBox="0 0 160 48" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
         <div class="cells">
           <div class="ctl"><i class="t"></i><span>On</span></div>
           <div class="ctl menu"><select class="pick" data-kind="filter" aria-label="Type"><option value="lowpass" selected>Lowpass</option><option value="highpass">Highpass</option><option value="bandpass">Bandpass</option><option value="notch">Notch</option></select><span>Type</span></div>
@@ -844,6 +977,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
     <section class="panel osc">
       <h2>Oscillator B</h2>
       <div class="groups">
+        <div class="top">
         <div class="grp">
           <h3 class="gl">Pitch</h3>
           <div class="cells">
@@ -858,8 +992,9 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
             <div class="ctl"><i class="k" style="--a:62deg"></i><span>Volume</span></div>
             <div class="ctl"><i class="k bi"></i><span>Pan</span></div>
             <div class="ctl"><i class="k bi" style="--a:-135deg"></i><span>Balance</span></div>
-            <div class="ctl shift"><i class="k" style="--a:-18deg"></i><span>Stereo</span></div>
+            <div class="ctl menu wide"><select class="pick" aria-label="Filter Route"><option value="parallel" selected>Parallel</option><option value="serial">Serial</option></select><span>Filter Route</span></div>
           </div>
+        </div>
         </div>
         <div class="grp">
           <h3 class="gl">Wave</h3>
@@ -867,25 +1002,9 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
             <div class="ctl"><i class="t"></i><span>On</span></div>
             <div class="ctl menu"><select class="pick" data-kind="osc-wave" aria-label="Wave"><option value="sine" selected>Sine</option><option value="triangle">Triangle</option><option value="saw">Saw</option><option value="pulse">Pulse</option></select><span>Wave</span></div>
             <div class="ctl"><i class="k" style="--a:-96deg"></i><span>Phase</span></div>
+            <div class="break"></div>
             <div class="ctl"><i class="t"></i><span>Inv</span></div>
             <div class="ctl"><i class="t"></i><span>Retrigger</span></div>
-          </div>
-        </div>
-        <div class="grp">
-          <h3 class="gl">Unison</h3>
-          <div class="cells">
-            <div class="uni wide" role="img" aria-label="Unison voices: pan runs left to right, detune runs bottom to top">
-              <span class="ax y">Detune</span><span class="ax x">Pan</span>
-              <i style="--px:.9;--py:1;--wx:-1.4px;--wy:1px;--dur:9.5s;--del:-1s"></i>
-              <i style="--px:.3;--py:.667;--wx:1.2px;--wy:-1.2px;--dur:12s;--del:-4s"></i>
-              <i style="--px:.6;--py:.333;--wx:-1px;--wy:-1.2px;--dur:10.5s;--del:-7s"></i>
-              <i style="--px:0;--py:0;--wx:1.4px;--wy:.8px;--dur:13s;--del:-2s"></i>
-              <i style="--px:-.6;--py:-.333;--wx:1px;--wy:1.2px;--dur:11s;--del:-5s"></i>
-              <i style="--px:-.3;--py:-.667;--wx:-1.2px;--wy:1.2px;--dur:9s;--del:-3s"></i>
-              <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
-            </div>
-            <div class="ctl"><i class="k" style="--a:18deg"></i><span>Voices</span></div>
-            <div class="ctl"><i class="k" style="--a:-42deg"></i><span>Detune</span></div>
           </div>
         </div>
       </div>
@@ -903,15 +1022,32 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
         </div>
       </section>
+      <div class="grp">
+        <h3 class="gl">Unison</h3>
+        <div class="cells">
+          <div class="uni wide" role="img" aria-label="Unison voices: pan runs left to right, detune runs bottom to top">
+            <span class="ax y">Detune</span><span class="ax x">Pan</span>
+            <i style="--px:.9;--py:1;--wx:-1.4px;--wy:1px;--dur:9.5s;--del:-1s"></i>
+            <i style="--px:.3;--py:.667;--wx:1.2px;--wy:-1.2px;--dur:12s;--del:-4s"></i>
+            <i style="--px:.6;--py:.333;--wx:-1px;--wy:-1.2px;--dur:10.5s;--del:-7s"></i>
+            <i style="--px:0;--py:0;--wx:1.4px;--wy:.8px;--dur:13s;--del:-2s"></i>
+            <i style="--px:-.6;--py:-.333;--wx:1px;--wy:1.2px;--dur:11s;--del:-5s"></i>
+            <i style="--px:-.3;--py:-.667;--wx:-1.2px;--wy:1.2px;--dur:9s;--del:-3s"></i>
+            <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
+          </div>
+          <div class="ctl"><i class="k" style="--a:18deg"></i><span>Voices</span></div>
+          <div class="ctl"><i class="k" style="--a:-42deg"></i><span>Detune</span></div>
+          <div class="ctl"><i class="k" style="--a:-18deg"></i><span>Stereo</span></div>
+        </div>
+      </div>
     </section>
     <div class="post">
       <div class="pair">
       <section class="panel">
         <h2>Filter B1</h2>
-        <svg class="response" viewBox="0 0 160 48" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
+        <svg class="response" viewBox="0 0 160 48" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
         <div class="cells">
           <div class="ctl"><i class="t on"></i><span>On</span></div>
-          <div class="ctl menu"><select class="pick" aria-label="Route"><option value="parallel" selected>Parallel</option><option value="serial">Serial</option></select><span>Route</span></div>
           <div class="ctl menu"><select class="pick" data-kind="filter" aria-label="Type"><option value="lowpass" selected>Lowpass</option><option value="highpass">Highpass</option><option value="bandpass">Bandpass</option><option value="notch">Notch</option></select><span>Type</span></div>
           <div class="ctl"><i class="k" style="--a:27deg"></i><span>Amount</span></div>
           <div class="ctl"><i class="k" style="--a:-68deg"></i><span>Drive</span></div>
@@ -939,7 +1075,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
       <div class="pair">
       <section class="panel">
         <h2>Filter B2</h2>
-        <svg class="response" viewBox="0 0 160 48" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
+        <svg class="response" viewBox="0 0 160 48" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
         <div class="cells">
           <div class="ctl"><i class="t"></i><span>On</span></div>
           <div class="ctl menu"><select class="pick" data-kind="filter" aria-label="Type"><option value="lowpass" selected>Lowpass</option><option value="highpass">Highpass</option><option value="bandpass">Bandpass</option><option value="notch">Notch</option></select><span>Type</span></div>
@@ -988,6 +1124,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
     <section class="panel osc">
       <h2>Oscillator C</h2>
       <div class="groups">
+        <div class="top">
         <div class="grp">
           <h3 class="gl">Pitch</h3>
           <div class="cells">
@@ -1002,8 +1139,9 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
             <div class="ctl"><i class="k" style="--a:62deg"></i><span>Volume</span></div>
             <div class="ctl"><i class="k bi"></i><span>Pan</span></div>
             <div class="ctl"><i class="k bi" style="--a:-135deg"></i><span>Balance</span></div>
-            <div class="ctl shift"><i class="k" style="--a:-18deg"></i><span>Stereo</span></div>
+            <div class="ctl menu wide"><select class="pick" aria-label="Filter Route"><option value="parallel" selected>Parallel</option><option value="serial">Serial</option></select><span>Filter Route</span></div>
           </div>
+        </div>
         </div>
         <div class="grp">
           <h3 class="gl">Wave</h3>
@@ -1011,25 +1149,9 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
             <div class="ctl"><i class="t"></i><span>On</span></div>
             <div class="ctl menu"><select class="pick" data-kind="osc-wave" aria-label="Wave"><option value="sine" selected>Sine</option><option value="triangle">Triangle</option><option value="saw">Saw</option><option value="pulse">Pulse</option></select><span>Wave</span></div>
             <div class="ctl"><i class="k" style="--a:-96deg"></i><span>Phase</span></div>
+            <div class="break"></div>
             <div class="ctl"><i class="t"></i><span>Inv</span></div>
             <div class="ctl"><i class="t"></i><span>Retrigger</span></div>
-          </div>
-        </div>
-        <div class="grp">
-          <h3 class="gl">Unison</h3>
-          <div class="cells">
-            <div class="uni wide" role="img" aria-label="Unison voices: pan runs left to right, detune runs bottom to top">
-              <span class="ax y">Detune</span><span class="ax x">Pan</span>
-              <i style="--px:.9;--py:1;--wx:-1.4px;--wy:1px;--dur:9.5s;--del:-1s"></i>
-              <i style="--px:.3;--py:.667;--wx:1.2px;--wy:-1.2px;--dur:12s;--del:-4s"></i>
-              <i style="--px:.6;--py:.333;--wx:-1px;--wy:-1.2px;--dur:10.5s;--del:-7s"></i>
-              <i style="--px:0;--py:0;--wx:1.4px;--wy:.8px;--dur:13s;--del:-2s"></i>
-              <i style="--px:-.6;--py:-.333;--wx:1px;--wy:1.2px;--dur:11s;--del:-5s"></i>
-              <i style="--px:-.3;--py:-.667;--wx:-1.2px;--wy:1.2px;--dur:9s;--del:-3s"></i>
-              <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
-            </div>
-            <div class="ctl"><i class="k" style="--a:18deg"></i><span>Voices</span></div>
-            <div class="ctl"><i class="k" style="--a:-42deg"></i><span>Detune</span></div>
           </div>
         </div>
       </div>
@@ -1047,15 +1169,32 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
         </div>
       </section>
+      <div class="grp">
+        <h3 class="gl">Unison</h3>
+        <div class="cells">
+          <div class="uni wide" role="img" aria-label="Unison voices: pan runs left to right, detune runs bottom to top">
+            <span class="ax y">Detune</span><span class="ax x">Pan</span>
+            <i style="--px:.9;--py:1;--wx:-1.4px;--wy:1px;--dur:9.5s;--del:-1s"></i>
+            <i style="--px:.3;--py:.667;--wx:1.2px;--wy:-1.2px;--dur:12s;--del:-4s"></i>
+            <i style="--px:.6;--py:.333;--wx:-1px;--wy:-1.2px;--dur:10.5s;--del:-7s"></i>
+            <i style="--px:0;--py:0;--wx:1.4px;--wy:.8px;--dur:13s;--del:-2s"></i>
+            <i style="--px:-.6;--py:-.333;--wx:1px;--wy:1.2px;--dur:11s;--del:-5s"></i>
+            <i style="--px:-.3;--py:-.667;--wx:-1.2px;--wy:1.2px;--dur:9s;--del:-3s"></i>
+            <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
+          </div>
+          <div class="ctl"><i class="k" style="--a:18deg"></i><span>Voices</span></div>
+          <div class="ctl"><i class="k" style="--a:-42deg"></i><span>Detune</span></div>
+          <div class="ctl"><i class="k" style="--a:-18deg"></i><span>Stereo</span></div>
+        </div>
+      </div>
     </section>
     <div class="post">
       <div class="pair">
       <section class="panel">
         <h2>Filter C1</h2>
-        <svg class="response" viewBox="0 0 160 48" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
+        <svg class="response" viewBox="0 0 160 48" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
         <div class="cells">
           <div class="ctl"><i class="t on"></i><span>On</span></div>
-          <div class="ctl menu"><select class="pick" aria-label="Route"><option value="parallel" selected>Parallel</option><option value="serial">Serial</option></select><span>Route</span></div>
           <div class="ctl menu"><select class="pick" data-kind="filter" aria-label="Type"><option value="lowpass" selected>Lowpass</option><option value="highpass">Highpass</option><option value="bandpass">Bandpass</option><option value="notch">Notch</option></select><span>Type</span></div>
           <div class="ctl"><i class="k" style="--a:27deg"></i><span>Amount</span></div>
           <div class="ctl"><i class="k" style="--a:-68deg"></i><span>Drive</span></div>
@@ -1083,7 +1222,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
       <div class="pair">
       <section class="panel">
         <h2>Filter C2</h2>
-        <svg class="response" viewBox="0 0 160 48" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
+        <svg class="response" viewBox="0 0 160 48" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
         <div class="cells">
           <div class="ctl"><i class="t"></i><span>On</span></div>
           <div class="ctl menu"><select class="pick" data-kind="filter" aria-label="Type"><option value="lowpass" selected>Lowpass</option><option value="highpass">Highpass</option><option value="bandpass">Bandpass</option><option value="notch">Notch</option></select><span>Type</span></div>
@@ -1132,6 +1271,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
     <section class="panel osc">
       <h2>Oscillator D</h2>
       <div class="groups">
+        <div class="top">
         <div class="grp">
           <h3 class="gl">Pitch</h3>
           <div class="cells">
@@ -1146,8 +1286,9 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
             <div class="ctl"><i class="k" style="--a:62deg"></i><span>Volume</span></div>
             <div class="ctl"><i class="k bi"></i><span>Pan</span></div>
             <div class="ctl"><i class="k bi" style="--a:-135deg"></i><span>Balance</span></div>
-            <div class="ctl shift"><i class="k" style="--a:-18deg"></i><span>Stereo</span></div>
+            <div class="ctl menu wide"><select class="pick" aria-label="Filter Route"><option value="parallel" selected>Parallel</option><option value="serial">Serial</option></select><span>Filter Route</span></div>
           </div>
+        </div>
         </div>
         <div class="grp">
           <h3 class="gl">Wave</h3>
@@ -1155,25 +1296,9 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
             <div class="ctl"><i class="t"></i><span>On</span></div>
             <div class="ctl menu"><select class="pick" data-kind="osc-wave" aria-label="Wave"><option value="sine" selected>Sine</option><option value="triangle">Triangle</option><option value="saw">Saw</option><option value="pulse">Pulse</option></select><span>Wave</span></div>
             <div class="ctl"><i class="k" style="--a:-96deg"></i><span>Phase</span></div>
+            <div class="break"></div>
             <div class="ctl"><i class="t"></i><span>Inv</span></div>
             <div class="ctl"><i class="t"></i><span>Retrigger</span></div>
-          </div>
-        </div>
-        <div class="grp">
-          <h3 class="gl">Unison</h3>
-          <div class="cells">
-            <div class="uni wide" role="img" aria-label="Unison voices: pan runs left to right, detune runs bottom to top">
-              <span class="ax y">Detune</span><span class="ax x">Pan</span>
-              <i style="--px:.9;--py:1;--wx:-1.4px;--wy:1px;--dur:9.5s;--del:-1s"></i>
-              <i style="--px:.3;--py:.667;--wx:1.2px;--wy:-1.2px;--dur:12s;--del:-4s"></i>
-              <i style="--px:.6;--py:.333;--wx:-1px;--wy:-1.2px;--dur:10.5s;--del:-7s"></i>
-              <i style="--px:0;--py:0;--wx:1.4px;--wy:.8px;--dur:13s;--del:-2s"></i>
-              <i style="--px:-.6;--py:-.333;--wx:1px;--wy:1.2px;--dur:11s;--del:-5s"></i>
-              <i style="--px:-.3;--py:-.667;--wx:-1.2px;--wy:1.2px;--dur:9s;--del:-3s"></i>
-              <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
-            </div>
-            <div class="ctl"><i class="k" style="--a:18deg"></i><span>Voices</span></div>
-            <div class="ctl"><i class="k" style="--a:-42deg"></i><span>Detune</span></div>
           </div>
         </div>
       </div>
@@ -1191,15 +1316,32 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
         </div>
       </section>
+      <div class="grp">
+        <h3 class="gl">Unison</h3>
+        <div class="cells">
+          <div class="uni wide" role="img" aria-label="Unison voices: pan runs left to right, detune runs bottom to top">
+            <span class="ax y">Detune</span><span class="ax x">Pan</span>
+            <i style="--px:.9;--py:1;--wx:-1.4px;--wy:1px;--dur:9.5s;--del:-1s"></i>
+            <i style="--px:.3;--py:.667;--wx:1.2px;--wy:-1.2px;--dur:12s;--del:-4s"></i>
+            <i style="--px:.6;--py:.333;--wx:-1px;--wy:-1.2px;--dur:10.5s;--del:-7s"></i>
+            <i style="--px:0;--py:0;--wx:1.4px;--wy:.8px;--dur:13s;--del:-2s"></i>
+            <i style="--px:-.6;--py:-.333;--wx:1px;--wy:1.2px;--dur:11s;--del:-5s"></i>
+            <i style="--px:-.3;--py:-.667;--wx:-1.2px;--wy:1.2px;--dur:9s;--del:-3s"></i>
+            <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
+          </div>
+          <div class="ctl"><i class="k" style="--a:18deg"></i><span>Voices</span></div>
+          <div class="ctl"><i class="k" style="--a:-42deg"></i><span>Detune</span></div>
+          <div class="ctl"><i class="k" style="--a:-18deg"></i><span>Stereo</span></div>
+        </div>
+      </div>
     </section>
     <div class="post">
       <div class="pair">
       <section class="panel">
         <h2>Filter D1</h2>
-        <svg class="response" viewBox="0 0 160 48" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
+        <svg class="response" viewBox="0 0 160 48" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
         <div class="cells">
           <div class="ctl"><i class="t on"></i><span>On</span></div>
-          <div class="ctl menu"><select class="pick" aria-label="Route"><option value="parallel" selected>Parallel</option><option value="serial">Serial</option></select><span>Route</span></div>
           <div class="ctl menu"><select class="pick" data-kind="filter" aria-label="Type"><option value="lowpass" selected>Lowpass</option><option value="highpass">Highpass</option><option value="bandpass">Bandpass</option><option value="notch">Notch</option></select><span>Type</span></div>
           <div class="ctl"><i class="k" style="--a:27deg"></i><span>Amount</span></div>
           <div class="ctl"><i class="k" style="--a:-68deg"></i><span>Drive</span></div>
@@ -1227,7 +1369,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
       <div class="pair">
       <section class="panel">
         <h2>Filter D2</h2>
-        <svg class="response" viewBox="0 0 160 48" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
+        <svg class="response" viewBox="0 0 160 48" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path class="grid" d="M4 20H156"/><path class="curve" d=""/></svg>
         <div class="cells">
           <div class="ctl"><i class="t"></i><span>On</span></div>
           <div class="ctl menu"><select class="pick" data-kind="filter" aria-label="Type"><option value="lowpass" selected>Lowpass</option><option value="highpass">Highpass</option><option value="bandpass">Bandpass</option><option value="notch">Notch</option></select><span>Type</span></div>

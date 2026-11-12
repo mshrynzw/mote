@@ -20,21 +20,27 @@ Master、Mod Env、LFO はタブの外に残し、どのタブでも見える。
 
 ## Oscillator（1〜4 共通）
 
-4基とも同じ項目を持つ。
+4基とも同じ項目を持つ。初期状態でオンなのは Oscillator 1 だけである。2、3、4 はオフで、オフのあいだはその基を計算しない。
+
+範囲と初期値は、Phase 3 の Setting 画面で変えられるようにする。それまでは、ここに書いた値を本体の初期値にする。
+
+- On。Oscillator 1 の初期値はオン。2、3、4 はオフ
 
 ### Pitch
 
-- Octave
-- Note
-- Fine
+- Octave。初期値 0。範囲は -2 から +2
+- Note。初期値 0。範囲は -24 から +24
+- Fine。単位はセント。初期値 0。範囲は -100 から +100
 
 ### Output
 
-- Volume
+- Volume。単位は dB。初期値 0 dB。範囲は -60 dB から +12 dB
 - Pan
 - Stereo
 
 ### Wave
+
+最初に実装するのは Classic だけである。Classic は、サイン、三角、ノコギリ、パルスを計算で出す。Stacked Saw と Wavetable は名前だけ残し、Classic が鳴ってから別の作業にする。Stacked Saw は 1 基の中でノコギリを重ねる。Wavetable は、作っておいた 1 周期の波を読み替える。
 
 - Wave
 - Phase
@@ -42,6 +48,10 @@ Master、Mod Env、LFO はタブの外に残し、どのタブでも見える。
 - Retrigger
 
 ### Unison
+
+Detune の単位はセント。初期値 0。範囲は 0 から 100。最大のとき、いちばん外側の Voice が ±100 セントになる。
+
+配置は十字が基準である。横軸が Pan、縦軸が Detune、交点が中央である。各 Voice は別の横位置に、等間隔で置く。いちばん外側でも軸の端には載せない。8 Voice のとき、左端に 4 つ、右端に 4 つとはしない。Detune も同じ順で、上下が鏡になるように振る。音程と定位の中心は交点のままである。
 
 - Voices
 - Detune

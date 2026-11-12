@@ -1,7 +1,7 @@
 //! Mote のプラグイン入口。
 //!
 //! `lib.rs` はライブラリのルートで、DAW が最初に読み込むファイルになる。
-//! 音の計算は `sine.rs` にあり、ここでは MIDI を受け取って左右のOutputへ書き込む。
+//! 音の計算は `voice.rs` と `oscillator.rs` にあり、ここでは MIDI を受け取って左右の Output へ書き込む。
 
 // `prelude` は、プラグインを書くときによく使う型やマクロをまとめて読み込む。
 use nice_plug::prelude::*;
@@ -10,28 +10,24 @@ use std::num::NonZeroU32;
 // `Arc` は複数の場所から同じ値を共有するポインタ。パラメータをホストとプラグインで共有する。
 use std::sync::Arc;
 
-// 同じディレクトリの `sine.rs` を、このライブラリの一部として読み込む。
-mod sine;
+mod oscillator;
+mod params;
+mod unison;
+mod voice;
+mod wavetable;
 
-use sine::SineVoice;
+use params::MoteParams;
+use voice::NoteVoice;
 
 /// DAW に見えるプラグイン本体。
 ///
 /// `pub` は他のクレートからも見える、という意味。書き出しマクロがこの型を必要とする。
 pub struct Mote {
-    /// ホストへ渡すパラメータ一覧。Phase 1 では中身は空。
+    /// ホストへ渡すパラメータ一覧。オシレーター 4 基分のノブ。
     params: Arc<MoteParams>,
-    /// いま鳴っている 1 音。
-    voice: SineVoice,
+    /// いま鳴っている 1 ノート。中に Classic のオシレーターが 4 基ある。
+    voice: NoteVoice,
 }
-
-/// ノブなどのパラメータ。
-///
-/// `#[derive(Default, Params)]` は、決まったメソッドをコンパイラに書かせる印。
-/// `Default` は初期値、`Params` は nice-plug がパラメータとして認識するためのもの。
-/// フィールドが無いので、DAW 上にノブは出ない。
-#[derive(Default, Params)]
-struct MoteParams {}
 
 // `Default` を実装すると `Mote::default()` で初期状態を作れる。
 // ホストはプラグインを読み込むとき、このメソッドでインスタンスを作る。
@@ -40,7 +36,7 @@ impl Default for Mote {
         Self {
             // `Arc::new` で共有用のポインタにする。中身のコピーはまだ発生しない。
             params: Arc::new(MoteParams::default()),
-            voice: SineVoice::new(),
+            voice: NoteVoice::new(),
         }
     }
 }
@@ -56,7 +52,7 @@ impl Mote {
                 // キー番号が無いイベント（どのキーでもよい、という指定）は無視する。
                 // `if let Some(note)` は、値があるときだけ中に入る。
                 if let Some(note) = key.number() {
-                    self.voice.note_on(note, velocity);
+                    self.voice.note_on(note, velocity, &self.params.oscillators());
                 }
             }
             // `|` は「この形でも、あの形でも」。ノートオフと、音を即座に切る Choke を同じ扱いにする。
@@ -149,10 +145,10 @@ impl Plugin for Mote {
                 next_event = context.next_event();
             }
 
-            let sample = self.voice.next_sample();
-            // 左右に同じ値を書く。`*` は参照の先にあるサンプルを書き換える。
-            for channel_sample in channel_samples {
-                *channel_sample = sample;
+            let (left, right) = self.voice.next_sample(&self.params.oscillators());
+            // 左右で値が違う。`enumerate` の 0 が左、1 が右。
+            for (channel, channel_sample) in channel_samples.into_iter().enumerate() {
+                *channel_sample = if channel == 0 { left } else { right };
             }
         }
 
@@ -169,7 +165,7 @@ impl Plugin for Mote {
 // CLAP 形式で書き出すときに必要な識別子。
 impl ClapPlugin for Mote {
     const CLAP_ID: &'static str = "com.mshrynzw.mote";
-    const CLAP_DESCRIPTION: Option<&'static str> = Some("A sine-wave instrument");
+    const CLAP_DESCRIPTION: Option<&'static str> = Some("Four classic oscillators");
     const CLAP_MANUAL_URL: Option<&'static str> = Some(Self::URL);
     const CLAP_SUPPORT_URL: Option<&'static str> = None;
     // 楽器であり、シンセであり、ステレオOutputである、とホストへ伝える。

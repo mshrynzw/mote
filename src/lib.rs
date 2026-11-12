@@ -11,6 +11,7 @@ use std::num::NonZeroU32;
 use std::sync::Arc;
 
 mod assign;
+mod editor;
 mod envelope;
 mod filter;
 mod filter_env;
@@ -25,6 +26,7 @@ mod wavetable;
 
 use params::MoteParams;
 use voice::Voices;
+use editor::MoteEditor;
 
 /// DAW に見えるプラグイン本体。
 ///
@@ -34,6 +36,8 @@ pub struct Mote {
     params: Arc<MoteParams>,
     /// 最大 16 ノート。鳴っていないスロットは計算しない。
     voices: Voices,
+    /// 画面の大きさ。ウィンドウを閉じても覚えておく。
+    editor_state: Arc<nice_plug_egui::EguiEditorState>,
 }
 
 // `Default` を実装すると `Mote::default()` で初期状態を作れる。
@@ -51,6 +55,7 @@ impl Default for Mote {
         Self {
             params,
             voices: Voices::new(),
+            editor_state: editor::initial_state(),
         }
     }
 }
@@ -118,9 +123,8 @@ impl Plugin for Mote {
     // バッファの途中にある MIDI も、そのサンプル位置で処理する。
     const SAMPLE_ACCURATE_AUTOMATION: bool = true;
 
-    // 関連型。Phase 1 では画面も、SysEx も、バックグラウンド処理も無いので空。
-    // `()` は「値が無い」ことを表すユニット型。
-    type Editor = ();
+    // 関連型。SysEx とバックグラウンド処理はまだ使わない。画面は Main。
+    type Editor = MoteEditor;
     type SysExMessage = ();
     type BackgroundTask = ();
 
@@ -128,6 +132,11 @@ impl Plugin for Mote {
     fn params(&self) -> Arc<dyn Params> {
         // `dyn Params` は「Params トレイトを実装した何か」。中身の型をホストから隠す。
         self.params.clone()
+    }
+
+    /// プラグインの画面。ホストがウィンドウを開くときに、この中身を埋め込む。
+    fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Self::Editor> {
+        editor::create(self.params.clone(), self.editor_state.clone())
     }
 
     /// 音を出し始める直前に 1 回呼ばれる。サンプルレートをここで覚える。

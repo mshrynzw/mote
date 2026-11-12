@@ -3,13 +3,15 @@ name = "mote"
 version = "0.1.0"
 edition = "2021"
 publish = false
-description = "Mote, a wavetable synthesizer. Phase 1 plays a MIDI sine tone."
+description = "Mote, a wavetable synthesizer."
 
 [lib]
 crate-type = ["cdylib", "lib"]
 
 [dependencies]
+egui = { version = "0.37.0", features = ["default_fonts"] }
 nice-plug = { version = "0.4.2", features = ["assert_process_allocs"] }
+nice-plug-egui = { version = "0.6.0", default-features = false, features = ["opengl"] }
 
 [profile.dev]
 opt-level = 1

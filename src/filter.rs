@@ -248,6 +248,7 @@ impl Filter {
     }
 
     /// 左右 1 サンプル。`note` が `None` のときは、基準のノート 60 として Amount を計算する。
+    /// `env_octaves` は Filter Env が足すオクターブ。ノブの Cutoff には書き戻さない。
     pub fn next_sample(
         &mut self,
         params: &FilterParams,
@@ -255,18 +256,26 @@ impl Filter {
         right: f32,
         note: Option<u8>,
         sample_rate: f32,
+        env_octaves: f32,
     ) -> (f32, f32) {
         let sample_rate = sample_rate.max(1.0);
         let amount = (params.amount.value() / 100.0).clamp(0.0, 1.0);
         let target_cutoff = tracked_cutoff(params.cutoff.value(), note.unwrap_or(60), amount)
             .clamp(20.0, sample_rate * 0.9);
-        let cutoff = glide(
+        // ノブ側だけを滑らかにする。エンベロープは毎サンプル動くので、この追従のあとで掛ける。
+        let base = glide(
             &self.cutoff,
             &mut self.last_cutoff,
             target_cutoff,
             sample_rate,
         )
         .clamp(20.0, sample_rate * 0.9);
+        let env_octaves = if env_octaves.is_finite() {
+            env_octaves
+        } else {
+            0.0
+        };
+        let cutoff = (base * 2.0f32.powf(env_octaves)).clamp(20.0, sample_rate * 0.9);
         let resonance = glide(
             &self.resonance,
             &mut self.last_resonance,
@@ -696,7 +705,8 @@ mod tests {
         for i in 0..4_096 {
             let sample = (phase * std::f32::consts::TAU).sin();
             phase = (phase + step) % 1.0;
-            let (left, right) = filter.next_sample(params, sample, sample, Some(note), 48_000.0);
+            let (left, right) =
+                filter.next_sample(params, sample, sample, Some(note), 48_000.0, 0.0);
             assert!(left.is_finite() && right.is_finite());
             if i > 3_000 {
                 peak = peak.max(left.abs());
@@ -725,7 +735,7 @@ mod tests {
         let mut last_left = 0.0;
         let mut last_right = 0.0;
         for _ in 0..1_000 {
-            let (left, right) = filter.next_sample(&params, 0.5, -0.25, Some(60), 48_000.0);
+            let (left, right) = filter.next_sample(&params, 0.5, -0.25, Some(60), 48_000.0, 0.0);
             assert!(left.is_finite() && right.is_finite());
             last_left = left;
             last_right = right;
@@ -804,8 +814,9 @@ mod tests {
         let mut differed = false;
         for i in 0..2_000 {
             let sample = 0.4 * (i as f32 * 440.0 / 48_000.0 * std::f32::consts::TAU).sin();
-            let (left, _) = plain.next_sample(&clean, sample, sample, Some(60), 48_000.0);
-            let (driven_left, _) = hot.next_sample(&driven, sample, sample, Some(60), 48_000.0);
+            let (left, _) = plain.next_sample(&clean, sample, sample, Some(60), 48_000.0, 0.0);
+            let (driven_left, _) =
+                hot.next_sample(&driven, sample, sample, Some(60), 48_000.0, 0.0);
             assert!(driven_left.is_finite());
             assert!(driven_left.abs() <= 1.01);
             if i > 1_000 && (left - driven_left).abs() > 0.05 {

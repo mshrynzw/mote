@@ -12,6 +12,7 @@ use std::sync::Arc;
 
 mod envelope;
 mod filter;
+mod filter_env;
 mod oscillator;
 mod params;
 mod unison;
@@ -40,6 +41,7 @@ impl Default for Mote {
         let params = Arc::new(MoteParams::default());
         params.bind_amp_sync();
         params.bind_filter_sync();
+        params.bind_filter_env_sync();
         Self {
             params,
             voice: NoteVoice::new(),
@@ -155,6 +157,7 @@ impl Plugin for Mote {
             let (left, right) = self.voice.next_sample(
                 &self.params.oscillators(),
                 &self.params.filters(),
+                &self.params.filter_envelopes(),
                 &self.params.amp_envelopes(),
             );
             // 左右で値が違う。`enumerate` の 0 が左、1 が右。

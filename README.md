@@ -7,7 +7,7 @@ Windows 11 向けのウェーブテーブル・シンセサイザーです。DAW
 
 ## いまの段階
 
-Phase 2 の途中です。オシレーターは 4 基で、Classic（サイン、三角、ノコギリ、パルス）と Unison が鳴ります。初期状態でオンなのは 1 基目だけです。同時に鳴るノートは 1 つで、あとから押したキーが優先されます。Amp Env の Attack、Decay、Sustain、Release と、それぞれの Curve が鳴る。A の Sync をオンにして Sync B、Sync C、Sync D を選ぶと、その列のノブが A と双方向に揃う。各オシレーターは自分のフィルターを通る。初期値は Lowpass で Cutoff が 20 kHz なので、Cutoff を下げるまで音はほぼそのままである。Filter Env、Mod Env、LFO、Stacked Saw、Wavetable、独自の画面はまだない。
+Phase 2 の途中です。オシレーターは 4 基で、Classic（サイン、三角、ノコギリ、パルス）と Unison が鳴ります。初期状態でオンなのは 1 基目だけです。同時に鳴るノートは 1 つで、あとから押したキーが優先されます。Amp Env の Attack、Decay、Sustain、Release と、それぞれの Curve が鳴る。A の Sync をオンにして Sync B、Sync C、Sync D を選ぶと、その列のノブが A と双方向に揃う。各オシレーターは自分のフィルターを通る。初期値は Lowpass で Cutoff が 20 kHz なので、Cutoff を下げるまで音はほぼそのままである。Filter Env は同じ番号の Cutoff だけを動かす。Amount の初期値は 0% なので、上げるまで Cutoff は動かない。Mod Env、LFO、Stacked Saw、Wavetable、独自の画面はまだない。
 
 ## ビルド
 

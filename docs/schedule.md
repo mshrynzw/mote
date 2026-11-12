@@ -8,7 +8,7 @@
 | Phase 2 Oscillator | 5 |  |  |  |  |
 | Phase 2 Amp Env | 3 |  |  | 2026-11-12 | 2026-11-12 |
 | Phase 2 Filter | 5 |  |  | 2026-11-12 | 2026-11-12 |
-| Phase 2 Filter Env | 3 |  |  |  |  |
+| Phase 2 Filter Env | 3 |  |  | 2026-11-12 | 2026-11-12 |
 | Phase 2 Master | 2 |  |  |  |  |
 | Phase 2 Mod Env | 3 |  |  |  |  |
 | Phase 2 LFO | 2 |  |  |  |  |

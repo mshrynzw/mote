@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600&family=Unbounded:wght@500&display=swap">
 <style>
 /* Layout: four voice chains run left to right into one bus that feeds the Master.
-   Mod Env 1-4 and LFO 1-4 sit apart below, with no wires.
+   Mod Env A-D and LFO A-D sit apart below, with no wires.
    Mood: a soft light hangs above the instrument. Dust motes drift through it, the solid
    panels break it into shafts, and each panel edge catches it on the side that faces it.
    Narrower than the 1000px artboard, sections wrap; controls never shrink. */
@@ -243,7 +243,14 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
   text-transform: uppercase;
   white-space: nowrap;
 }
-.sync {                     /* header toggle: links the settings of panels 1-4 */
+.syncs {                   /* A only: the link switch, then which of B, C, D follow */
+  position: absolute;
+  top: -7px;
+  right: 7px;
+  display: flex;
+  gap: 3px;
+}
+.sync {                     /* one link switch */
   position: absolute;
   top: -7px;
   right: 7px;
@@ -259,6 +266,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
   letter-spacing: .03em;
   white-space: nowrap;
 }
+.syncs .sync { position: static; }
 .sync svg { width: 10px; height: 10px; fill: none; stroke: var(--line); stroke-width: 2.6; stroke-linecap: round; }
 .sync.on { border-color: var(--on); color: var(--on); box-shadow: 0 0 10px rgb(159 197 233 / .4); }
 .sync.on svg { stroke: var(--on); }
@@ -272,10 +280,15 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
 .cells > * { grid-column: span 2; }
 .cells > .shift { grid-column: 2 / span 2; }
 .cells > .wide { grid-column: 1 / -1; }
-.rcells { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(var(--cell), 1fr); }
+.rcells {
+  display: grid;
+  grid-template-columns: repeat(5, var(--cell));
+  justify-content: center;
+  row-gap: 6px;
+}
 
 .ctl { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; }
-.ctl > span { font: 500 10.5px/12px var(--font-ui); white-space: nowrap; }
+.ctl > span { font: 500 10.5px/12px var(--font-ui); text-align: center; white-space: nowrap; }
 
 /* ---------- Knob: pearl cap, light-blue value arc ---------- */
 .k {
@@ -417,7 +430,9 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
   white-space: nowrap;
 }
 .route svg { width: 12px; height: 8px; fill: none; stroke: var(--on); stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
-.amp .cells { --cols: 4; --cell: 51px; }
+.post > .panel:first-child .cells { --cols: 10; }
+.fenv .cells { --cols: 10; }
+.amp .cells { --cols: 8; --cell: 51px; }
 
 /* ---------- Master ---------- */
 .master { grid-area: side; align-self: center; }
@@ -454,7 +469,6 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 18px 8px;
 }
-.lfo .rcells { grid-template-columns: repeat(4, minmax(34px, 1fr)) minmax(46px, 1.35fr) minmax(35px, 1fr); }
 
 /* ---------- Narrower windows: wrap, never shrink ---------- */
 @container stage (width < 1000px) {
@@ -527,9 +541,9 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
 <div class="chains">
 
   <!-- Chain 1 -->
-  <div class="chain" role="group" aria-label="Voice chain 1">
+  <div class="chain" role="group" aria-label="Voice chain A">
     <section class="panel osc">
-      <h2>Oscillator 1</h2>
+      <h2>Oscillator A</h2>
       <div class="groups">
         <div class="grp">
           <h3 class="gl">Pitch</h3>
@@ -550,10 +564,11 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
         <div class="grp">
           <h3 class="gl">Wave</h3>
           <div class="cells">
+            <div class="ctl"><i class="t on"></i><span>On</span></div>
             <div class="ctl"><i class="k" style="--a:-54deg"></i><span>Wave</span></div>
             <div class="ctl"><i class="k" style="--a:-96deg"></i><span>Phase</span></div>
             <div class="ctl"><i class="t"></i><span>Inv</span></div>
-            <div class="ctl"><i class="t on"></i><span>Retrigger</span></div>
+            <div class="ctl"><i class="t"></i><span>Retrigger</span></div>
           </div>
         </div>
         <div class="grp">
@@ -577,45 +592,68 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
     </section>
     <div class="post">
       <section class="panel">
-        <h2>Filter 1</h2>
-        <span class="sync"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
+        <h2>Filter A</h2>
+        <div class="syncs" aria-label="Link from A">
+          <span class="sync"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
+          <span class="sync" title="Sync B">B</span>
+          <span class="sync" title="Sync C">C</span>
+          <span class="sync" title="Sync D">D</span>
+        </div>
         <div class="cells">
           <div class="ctl"><i class="k" style="--a:-81deg"></i><span>Type</span></div>
           <div class="ctl"><i class="k" style="--a:27deg"></i><span>Amount</span></div>
           <div class="ctl"><i class="k" style="--a:-68deg"></i><span>Drive</span></div>
-          <div class="ctl shift"><i class="k" style="--a:50deg"></i><span>Cutoff</span></div>
+          <div class="ctl"><i class="k" style="--a:50deg"></i><span>Cutoff</span></div>
           <div class="ctl"><i class="k" style="--a:-40deg"></i><span>Resonance</span></div>
         </div>
       </section>
-      <section class="panel">
-        <h2>Filter Env 1</h2>
-        <span class="sync"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
-        <p class="route"><svg aria-hidden="true"><use href="#ar"/></svg>Filter 1 Cutoff</p>
+      <section class="panel fenv">
+        <h2>Filter Env A</h2>
+        <div class="syncs" aria-label="Link from A">
+          <span class="sync"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
+          <span class="sync" title="Sync B">B</span>
+          <span class="sync" title="Sync C">C</span>
+          <span class="sync" title="Sync D">D</span>
+        </div>
+        <p class="route"><svg aria-hidden="true"><use href="#ar"/></svg>Filter A Cutoff</p>
         <div class="cells">
           <div class="ctl"><i class="k" style="--a:-118deg"></i><span>Attack</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
           <div class="ctl"><i class="k" style="--a:-28deg"></i><span>Decay</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Decay<br>Curve</span></div>
           <div class="ctl"><i class="k" style="--a:36deg"></i><span>Sustain</span></div>
-          <div class="ctl shift"><i class="k" style="--a:-58deg"></i><span>Release</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Sustain<br>Curve</span></div>
+          <div class="ctl"><i class="k" style="--a:-58deg"></i><span>Release</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Release<br>Curve</span></div>
           <div class="ctl"><i class="k" style="--a:48deg"></i><span>Amount</span></div>
         </div>
       </section>
       <section class="panel amp">
-        <h2>Amp Env 1</h2>
-        <span class="sync on"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
+        <h2>Amp Env A</h2>
+        <div class="syncs" aria-label="Link from A">
+          <span class="sync"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
+          <span class="sync" title="Sync B">B</span>
+          <span class="sync" title="Sync C">C</span>
+          <span class="sync" title="Sync D">D</span>
+        </div>
         <div class="cells">
           <div class="ctl"><i class="k" style="--a:-128deg"></i><span>Attack</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
           <div class="ctl"><i class="k" style="--a:-14deg"></i><span>Decay</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Decay<br>Curve</span></div>
           <div class="ctl"><i class="k" style="--a:92deg"></i><span>Sustain</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Sustain<br>Curve</span></div>
           <div class="ctl"><i class="k" style="--a:-46deg"></i><span>Release</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Release<br>Curve</span></div>
         </div>
       </section>
     </div>
   </div>
 
   <!-- Chain 2 -->
-  <div class="chain" role="group" aria-label="Voice chain 2">
+  <div class="chain" role="group" aria-label="Voice chain B">
     <section class="panel osc">
-      <h2>Oscillator 2</h2>
+      <h2>Oscillator B</h2>
       <div class="groups">
         <div class="grp">
           <h3 class="gl">Pitch</h3>
@@ -636,10 +674,11 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
         <div class="grp">
           <h3 class="gl">Wave</h3>
           <div class="cells">
+            <div class="ctl"><i class="t"></i><span>On</span></div>
             <div class="ctl"><i class="k" style="--a:-54deg"></i><span>Wave</span></div>
             <div class="ctl"><i class="k" style="--a:-96deg"></i><span>Phase</span></div>
             <div class="ctl"><i class="t"></i><span>Inv</span></div>
-            <div class="ctl"><i class="t on"></i><span>Retrigger</span></div>
+            <div class="ctl"><i class="t"></i><span>Retrigger</span></div>
           </div>
         </div>
         <div class="grp">
@@ -663,45 +702,50 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
     </section>
     <div class="post">
       <section class="panel">
-        <h2>Filter 2</h2>
-        <span class="sync"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
+        <h2>Filter B</h2>
         <div class="cells">
           <div class="ctl"><i class="k" style="--a:-81deg"></i><span>Type</span></div>
           <div class="ctl"><i class="k" style="--a:27deg"></i><span>Amount</span></div>
           <div class="ctl"><i class="k" style="--a:-68deg"></i><span>Drive</span></div>
-          <div class="ctl shift"><i class="k" style="--a:50deg"></i><span>Cutoff</span></div>
+          <div class="ctl"><i class="k" style="--a:50deg"></i><span>Cutoff</span></div>
           <div class="ctl"><i class="k" style="--a:-40deg"></i><span>Resonance</span></div>
         </div>
       </section>
-      <section class="panel">
-        <h2>Filter Env 2</h2>
-        <span class="sync"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
-        <p class="route"><svg aria-hidden="true"><use href="#ar"/></svg>Filter 2 Cutoff</p>
+      <section class="panel fenv">
+        <h2>Filter Env B</h2>
+        <p class="route"><svg aria-hidden="true"><use href="#ar"/></svg>Filter B Cutoff</p>
         <div class="cells">
           <div class="ctl"><i class="k" style="--a:-118deg"></i><span>Attack</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
           <div class="ctl"><i class="k" style="--a:-28deg"></i><span>Decay</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Decay<br>Curve</span></div>
           <div class="ctl"><i class="k" style="--a:36deg"></i><span>Sustain</span></div>
-          <div class="ctl shift"><i class="k" style="--a:-58deg"></i><span>Release</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Sustain<br>Curve</span></div>
+          <div class="ctl"><i class="k" style="--a:-58deg"></i><span>Release</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Release<br>Curve</span></div>
           <div class="ctl"><i class="k" style="--a:48deg"></i><span>Amount</span></div>
         </div>
       </section>
       <section class="panel amp">
-        <h2>Amp Env 2</h2>
-        <span class="sync on"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
+        <h2>Amp Env B</h2>
         <div class="cells">
           <div class="ctl"><i class="k" style="--a:-128deg"></i><span>Attack</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
           <div class="ctl"><i class="k" style="--a:-14deg"></i><span>Decay</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Decay<br>Curve</span></div>
           <div class="ctl"><i class="k" style="--a:92deg"></i><span>Sustain</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Sustain<br>Curve</span></div>
           <div class="ctl"><i class="k" style="--a:-46deg"></i><span>Release</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Release<br>Curve</span></div>
         </div>
       </section>
     </div>
   </div>
 
   <!-- Chain 3 -->
-  <div class="chain" role="group" aria-label="Voice chain 3">
+  <div class="chain" role="group" aria-label="Voice chain C">
     <section class="panel osc">
-      <h2>Oscillator 3</h2>
+      <h2>Oscillator C</h2>
       <div class="groups">
         <div class="grp">
           <h3 class="gl">Pitch</h3>
@@ -722,10 +766,11 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
         <div class="grp">
           <h3 class="gl">Wave</h3>
           <div class="cells">
+            <div class="ctl"><i class="t"></i><span>On</span></div>
             <div class="ctl"><i class="k" style="--a:-54deg"></i><span>Wave</span></div>
             <div class="ctl"><i class="k" style="--a:-96deg"></i><span>Phase</span></div>
             <div class="ctl"><i class="t"></i><span>Inv</span></div>
-            <div class="ctl"><i class="t on"></i><span>Retrigger</span></div>
+            <div class="ctl"><i class="t"></i><span>Retrigger</span></div>
           </div>
         </div>
         <div class="grp">
@@ -749,45 +794,50 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
     </section>
     <div class="post">
       <section class="panel">
-        <h2>Filter 3</h2>
-        <span class="sync"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
+        <h2>Filter C</h2>
         <div class="cells">
           <div class="ctl"><i class="k" style="--a:-81deg"></i><span>Type</span></div>
           <div class="ctl"><i class="k" style="--a:27deg"></i><span>Amount</span></div>
           <div class="ctl"><i class="k" style="--a:-68deg"></i><span>Drive</span></div>
-          <div class="ctl shift"><i class="k" style="--a:50deg"></i><span>Cutoff</span></div>
+          <div class="ctl"><i class="k" style="--a:50deg"></i><span>Cutoff</span></div>
           <div class="ctl"><i class="k" style="--a:-40deg"></i><span>Resonance</span></div>
         </div>
       </section>
-      <section class="panel">
-        <h2>Filter Env 3</h2>
-        <span class="sync"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
-        <p class="route"><svg aria-hidden="true"><use href="#ar"/></svg>Filter 3 Cutoff</p>
+      <section class="panel fenv">
+        <h2>Filter Env C</h2>
+        <p class="route"><svg aria-hidden="true"><use href="#ar"/></svg>Filter C Cutoff</p>
         <div class="cells">
           <div class="ctl"><i class="k" style="--a:-118deg"></i><span>Attack</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
           <div class="ctl"><i class="k" style="--a:-28deg"></i><span>Decay</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Decay<br>Curve</span></div>
           <div class="ctl"><i class="k" style="--a:36deg"></i><span>Sustain</span></div>
-          <div class="ctl shift"><i class="k" style="--a:-58deg"></i><span>Release</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Sustain<br>Curve</span></div>
+          <div class="ctl"><i class="k" style="--a:-58deg"></i><span>Release</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Release<br>Curve</span></div>
           <div class="ctl"><i class="k" style="--a:48deg"></i><span>Amount</span></div>
         </div>
       </section>
       <section class="panel amp">
-        <h2>Amp Env 3</h2>
-        <span class="sync on"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
+        <h2>Amp Env C</h2>
         <div class="cells">
           <div class="ctl"><i class="k" style="--a:-128deg"></i><span>Attack</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
           <div class="ctl"><i class="k" style="--a:-14deg"></i><span>Decay</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Decay<br>Curve</span></div>
           <div class="ctl"><i class="k" style="--a:92deg"></i><span>Sustain</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Sustain<br>Curve</span></div>
           <div class="ctl"><i class="k" style="--a:-46deg"></i><span>Release</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Release<br>Curve</span></div>
         </div>
       </section>
     </div>
   </div>
 
   <!-- Chain 4 -->
-  <div class="chain" role="group" aria-label="Voice chain 4">
+  <div class="chain" role="group" aria-label="Voice chain D">
     <section class="panel osc">
-      <h2>Oscillator 4</h2>
+      <h2>Oscillator D</h2>
       <div class="groups">
         <div class="grp">
           <h3 class="gl">Pitch</h3>
@@ -808,10 +858,11 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
         <div class="grp">
           <h3 class="gl">Wave</h3>
           <div class="cells">
+            <div class="ctl"><i class="t"></i><span>On</span></div>
             <div class="ctl"><i class="k" style="--a:-54deg"></i><span>Wave</span></div>
             <div class="ctl"><i class="k" style="--a:-96deg"></i><span>Phase</span></div>
             <div class="ctl"><i class="t"></i><span>Inv</span></div>
-            <div class="ctl"><i class="t on"></i><span>Retrigger</span></div>
+            <div class="ctl"><i class="t"></i><span>Retrigger</span></div>
           </div>
         </div>
         <div class="grp">
@@ -835,36 +886,41 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
     </section>
     <div class="post">
       <section class="panel">
-        <h2>Filter 4</h2>
-        <span class="sync"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
+        <h2>Filter D</h2>
         <div class="cells">
           <div class="ctl"><i class="k" style="--a:-81deg"></i><span>Type</span></div>
           <div class="ctl"><i class="k" style="--a:27deg"></i><span>Amount</span></div>
           <div class="ctl"><i class="k" style="--a:-68deg"></i><span>Drive</span></div>
-          <div class="ctl shift"><i class="k" style="--a:50deg"></i><span>Cutoff</span></div>
+          <div class="ctl"><i class="k" style="--a:50deg"></i><span>Cutoff</span></div>
           <div class="ctl"><i class="k" style="--a:-40deg"></i><span>Resonance</span></div>
         </div>
       </section>
-      <section class="panel">
-        <h2>Filter Env 4</h2>
-        <span class="sync"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
-        <p class="route"><svg aria-hidden="true"><use href="#ar"/></svg>Filter 4 Cutoff</p>
+      <section class="panel fenv">
+        <h2>Filter Env D</h2>
+        <p class="route"><svg aria-hidden="true"><use href="#ar"/></svg>Filter D Cutoff</p>
         <div class="cells">
           <div class="ctl"><i class="k" style="--a:-118deg"></i><span>Attack</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
           <div class="ctl"><i class="k" style="--a:-28deg"></i><span>Decay</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Decay<br>Curve</span></div>
           <div class="ctl"><i class="k" style="--a:36deg"></i><span>Sustain</span></div>
-          <div class="ctl shift"><i class="k" style="--a:-58deg"></i><span>Release</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Sustain<br>Curve</span></div>
+          <div class="ctl"><i class="k" style="--a:-58deg"></i><span>Release</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Release<br>Curve</span></div>
           <div class="ctl"><i class="k" style="--a:48deg"></i><span>Amount</span></div>
         </div>
       </section>
       <section class="panel amp">
-        <h2>Amp Env 4</h2>
-        <span class="sync on"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
+        <h2>Amp Env D</h2>
         <div class="cells">
           <div class="ctl"><i class="k" style="--a:-128deg"></i><span>Attack</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
           <div class="ctl"><i class="k" style="--a:-14deg"></i><span>Decay</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Decay<br>Curve</span></div>
           <div class="ctl"><i class="k" style="--a:92deg"></i><span>Sustain</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Sustain<br>Curve</span></div>
           <div class="ctl"><i class="k" style="--a:-46deg"></i><span>Release</span></div>
+          <div class="ctl"><i class="k bi"></i><span>Release<br>Curve</span></div>
         </div>
       </section>
     </div>
@@ -882,102 +938,139 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
     <div class="ctl wide mode"><div class="seg"><span class="on">Poly</span><span>Mono</span></div><span>Mode</span></div>
     <div class="ctl wide"><i class="t"></i><span>Mono Legato</span></div>
     <div class="ctl wide"><i class="k" style="--a:-112deg"></i><span>Portamento</span></div>
+    <div class="ctl wide"><i class="k" style="--a:-40deg"></i><span>Polyphony</span></div>
   </div>
 </section>
 
 <div class="mods">
 
   <section class="panel">
-    <h2>Mod Env 1</h2>
-    <span class="sync"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
+    <h2>Mod Env A</h2>
+    <div class="syncs" aria-label="Link from A">
+      <span class="sync"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
+      <span class="sync" title="Sync B">B</span>
+      <span class="sync" title="Sync C">C</span>
+      <span class="sync" title="Sync D">D</span>
+    </div>
     <div class="rcells">
       <div class="ctl"><i class="k" style="--a:-104deg"></i><span>Attack</span></div>
+      <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
       <div class="ctl"><i class="k" style="--a:6deg"></i><span>Decay</span></div>
+      <div class="ctl"><i class="k bi"></i><span>Decay<br>Curve</span></div>
       <div class="ctl"><i class="k" style="--a:14deg"></i><span>Sustain</span></div>
+      <div class="ctl"><i class="k bi"></i><span>Sustain<br>Curve</span></div>
       <div class="ctl"><i class="k" style="--a:-50deg"></i><span>Release</span></div>
+      <div class="ctl"><i class="k bi"></i><span>Release<br>Curve</span></div>
       <div class="ctl"><i class="k" style="--a:30deg"></i><span>Amount</span></div>
+      <div class="ctl"><i class="k" style="--a:-90deg"></i><span>Target</span></div>
+      <div class="ctl"><i class="k" style="--a:-20deg"></i><span>Chain</span></div>
     </div>
   </section>
   <section class="panel">
-    <h2>Mod Env 2</h2>
-    <span class="sync"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
+    <h2>Mod Env B</h2>
     <div class="rcells">
       <div class="ctl"><i class="k" style="--a:-104deg"></i><span>Attack</span></div>
+      <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
       <div class="ctl"><i class="k" style="--a:6deg"></i><span>Decay</span></div>
+      <div class="ctl"><i class="k bi"></i><span>Decay<br>Curve</span></div>
       <div class="ctl"><i class="k" style="--a:14deg"></i><span>Sustain</span></div>
+      <div class="ctl"><i class="k bi"></i><span>Sustain<br>Curve</span></div>
       <div class="ctl"><i class="k" style="--a:-50deg"></i><span>Release</span></div>
+      <div class="ctl"><i class="k bi"></i><span>Release<br>Curve</span></div>
       <div class="ctl"><i class="k" style="--a:30deg"></i><span>Amount</span></div>
+      <div class="ctl"><i class="k" style="--a:-90deg"></i><span>Target</span></div>
+      <div class="ctl"><i class="k" style="--a:-20deg"></i><span>Chain</span></div>
     </div>
   </section>
   <section class="panel">
-    <h2>Mod Env 3</h2>
-    <span class="sync"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
+    <h2>Mod Env C</h2>
     <div class="rcells">
       <div class="ctl"><i class="k" style="--a:-104deg"></i><span>Attack</span></div>
+      <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
       <div class="ctl"><i class="k" style="--a:6deg"></i><span>Decay</span></div>
+      <div class="ctl"><i class="k bi"></i><span>Decay<br>Curve</span></div>
       <div class="ctl"><i class="k" style="--a:14deg"></i><span>Sustain</span></div>
+      <div class="ctl"><i class="k bi"></i><span>Sustain<br>Curve</span></div>
       <div class="ctl"><i class="k" style="--a:-50deg"></i><span>Release</span></div>
+      <div class="ctl"><i class="k bi"></i><span>Release<br>Curve</span></div>
       <div class="ctl"><i class="k" style="--a:30deg"></i><span>Amount</span></div>
+      <div class="ctl"><i class="k" style="--a:-90deg"></i><span>Target</span></div>
+      <div class="ctl"><i class="k" style="--a:-20deg"></i><span>Chain</span></div>
     </div>
   </section>
   <section class="panel">
-    <h2>Mod Env 4</h2>
-    <span class="sync"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
+    <h2>Mod Env D</h2>
     <div class="rcells">
       <div class="ctl"><i class="k" style="--a:-104deg"></i><span>Attack</span></div>
+      <div class="ctl"><i class="k bi"></i><span>Attack<br>Curve</span></div>
       <div class="ctl"><i class="k" style="--a:6deg"></i><span>Decay</span></div>
+      <div class="ctl"><i class="k bi"></i><span>Decay<br>Curve</span></div>
       <div class="ctl"><i class="k" style="--a:14deg"></i><span>Sustain</span></div>
+      <div class="ctl"><i class="k bi"></i><span>Sustain<br>Curve</span></div>
       <div class="ctl"><i class="k" style="--a:-50deg"></i><span>Release</span></div>
+      <div class="ctl"><i class="k bi"></i><span>Release<br>Curve</span></div>
       <div class="ctl"><i class="k" style="--a:30deg"></i><span>Amount</span></div>
+      <div class="ctl"><i class="k" style="--a:-90deg"></i><span>Target</span></div>
+      <div class="ctl"><i class="k" style="--a:-20deg"></i><span>Chain</span></div>
     </div>
   </section>
 
   <section class="panel lfo">
-    <h2>LFO 1</h2>
-    <span class="sync" title="Links LFO 1-4 settings"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
+    <h2>LFO A</h2>
+    <div class="syncs" aria-label="Link from A">
+      <span class="sync"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
+      <span class="sync" title="Sync B">B</span>
+      <span class="sync" title="Sync C">C</span>
+      <span class="sync" title="Sync D">D</span>
+    </div>
     <div class="rcells">
       <div class="ctl"><i class="k" style="--a:-40deg"></i><span>Wave</span></div>
       <div class="ctl"><i class="k" style="--a:22deg"></i><span>Rate</span></div>
-      <div class="ctl" title="Tempo sync"><i class="t on"></i><span>Sync</span></div>
+      <div class="ctl" title="Match the host tempo"><i class="t"></i><span>Tempo</span></div>
       <div class="ctl"><i class="k" style="--a:-100deg"></i><span>Phase</span></div>
       <div class="ctl"><i class="t"></i><span>Retrigger</span></div>
       <div class="ctl"><i class="k" style="--a:34deg"></i><span>Amount</span></div>
+      <div class="ctl"><i class="k" style="--a:-90deg"></i><span>Target</span></div>
+      <div class="ctl"><i class="k" style="--a:-20deg"></i><span>Chain</span></div>
     </div>
   </section>
   <section class="panel lfo">
-    <h2>LFO 2</h2>
-    <span class="sync" title="Links LFO 1-4 settings"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
+    <h2>LFO B</h2>
     <div class="rcells">
       <div class="ctl"><i class="k" style="--a:-40deg"></i><span>Wave</span></div>
       <div class="ctl"><i class="k" style="--a:22deg"></i><span>Rate</span></div>
-      <div class="ctl" title="Tempo sync"><i class="t on"></i><span>Sync</span></div>
+      <div class="ctl" title="Match the host tempo"><i class="t"></i><span>Tempo</span></div>
       <div class="ctl"><i class="k" style="--a:-100deg"></i><span>Phase</span></div>
       <div class="ctl"><i class="t"></i><span>Retrigger</span></div>
       <div class="ctl"><i class="k" style="--a:34deg"></i><span>Amount</span></div>
+      <div class="ctl"><i class="k" style="--a:-90deg"></i><span>Target</span></div>
+      <div class="ctl"><i class="k" style="--a:-20deg"></i><span>Chain</span></div>
     </div>
   </section>
   <section class="panel lfo">
-    <h2>LFO 3</h2>
-    <span class="sync" title="Links LFO 1-4 settings"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
+    <h2>LFO C</h2>
     <div class="rcells">
       <div class="ctl"><i class="k" style="--a:-40deg"></i><span>Wave</span></div>
       <div class="ctl"><i class="k" style="--a:22deg"></i><span>Rate</span></div>
-      <div class="ctl" title="Tempo sync"><i class="t on"></i><span>Sync</span></div>
+      <div class="ctl" title="Match the host tempo"><i class="t"></i><span>Tempo</span></div>
       <div class="ctl"><i class="k" style="--a:-100deg"></i><span>Phase</span></div>
       <div class="ctl"><i class="t"></i><span>Retrigger</span></div>
       <div class="ctl"><i class="k" style="--a:34deg"></i><span>Amount</span></div>
+      <div class="ctl"><i class="k" style="--a:-90deg"></i><span>Target</span></div>
+      <div class="ctl"><i class="k" style="--a:-20deg"></i><span>Chain</span></div>
     </div>
   </section>
   <section class="panel lfo">
-    <h2>LFO 4</h2>
-    <span class="sync" title="Links LFO 1-4 settings"><svg aria-hidden="true"><use href="#lk"/></svg>Sync</span>
+    <h2>LFO D</h2>
     <div class="rcells">
       <div class="ctl"><i class="k" style="--a:-40deg"></i><span>Wave</span></div>
       <div class="ctl"><i class="k" style="--a:22deg"></i><span>Rate</span></div>
-      <div class="ctl" title="Tempo sync"><i class="t on"></i><span>Sync</span></div>
+      <div class="ctl" title="Match the host tempo"><i class="t"></i><span>Tempo</span></div>
       <div class="ctl"><i class="k" style="--a:-100deg"></i><span>Phase</span></div>
       <div class="ctl"><i class="t"></i><span>Retrigger</span></div>
       <div class="ctl"><i class="k" style="--a:34deg"></i><span>Amount</span></div>
+      <div class="ctl"><i class="k" style="--a:-90deg"></i><span>Target</span></div>
+      <div class="ctl"><i class="k" style="--a:-20deg"></i><span>Chain</span></div>
     </div>
   </section>
 

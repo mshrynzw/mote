@@ -29,6 +29,13 @@ const INK: Color32 = Color32::from_rgb(241, 241, 241);
 const LINE: Color32 = Color32::from_rgb(164, 182, 183);
 const ON: Color32 = Color32::from_rgb(159, 197, 233);
 const LETTERS: [&str; 4] = ["A", "B", "C", "D"];
+/// 設計図の A〜D と同じ順。Oscillator、Filter、Filter Env、Amp Env。
+const OSC_W: f32 = 292.0;
+const FILTER_W: f32 = 210.0;
+const FILTER_ENV_W: f32 = 268.0;
+const AMP_W: f32 = 220.0;
+const MASTER_W: f32 = 156.0;
+const COL_GAP: f32 = 10.0;
 
 /// 開いている画面の状態。ノブの値そのものは `params` が持つ。
 pub struct MoteGui {
@@ -93,20 +100,24 @@ impl NiceEguiApp for MoteGui {
         ScrollArea::both()
             .auto_shrink([false, false])
             .show(ui, |ui| {
+                ui.set_min_width(chain_row_width() + COL_GAP + MASTER_W);
                 self.header(ui);
                 ui.add_space(8.0);
                 ui.horizontal_top(|ui| {
-                    ui.vertical(|ui| self.chains(ui, &setter));
-                    ui.add_space(12.0);
-                    panel(ui, "Master", |ui| {
-                        master_controls(ui, &setter, &self.params.master);
+                    ui.spacing_mut().item_spacing.x = COL_GAP;
+                    column(ui, chain_row_width(), |ui| self.chains(ui, &setter));
+                    column(ui, MASTER_W, |ui| {
+                        panel(ui, "Master", |ui| {
+                            master_controls(ui, &setter, &self.params.master);
+                        });
                     });
                 });
                 ui.add_space(16.0);
+                let half = (chain_row_width() + COL_GAP + MASTER_W - COL_GAP) / 2.0;
                 ui.horizontal_top(|ui| {
-                    ui.vertical(|ui| self.mod_envs(ui, &setter));
-                    ui.add_space(12.0);
-                    ui.vertical(|ui| self.lfos(ui, &setter));
+                    ui.spacing_mut().item_spacing.x = COL_GAP;
+                    column(ui, half, |ui| self.mod_envs(ui, &setter));
+                    column(ui, half, |ui| self.lfos(ui, &setter));
                 });
             });
     }
@@ -182,17 +193,26 @@ impl MoteGui {
         let filter_env = self.params.filter_envelopes()[index];
         let amp = self.params.amp_envelopes()[index];
         ui.horizontal_top(|ui| {
-            panel(ui, &format!("Oscillator {}", LETTERS[index]), |ui| {
-                osc_controls(ui, setter, osc);
+            ui.spacing_mut().item_spacing.x = COL_GAP;
+            column(ui, OSC_W, |ui| {
+                panel(ui, &format!("Oscillator {}", LETTERS[index]), |ui| {
+                    osc_controls(ui, setter, osc);
+                });
             });
-            panel(ui, &format!("Filter {}", LETTERS[index]), |ui| {
-                filter_controls(ui, setter, filter, index);
+            column(ui, FILTER_W, |ui| {
+                panel(ui, &format!("Filter {}", LETTERS[index]), |ui| {
+                    filter_controls(ui, setter, filter, index);
+                });
             });
-            panel(ui, &format!("Filter Env {}", LETTERS[index]), |ui| {
-                filter_env_controls(ui, setter, filter_env, index);
+            column(ui, FILTER_ENV_W, |ui| {
+                panel(ui, &format!("Filter Env {}", LETTERS[index]), |ui| {
+                    filter_env_controls(ui, setter, filter_env, index);
+                });
             });
-            panel(ui, &format!("Amp Env {}", LETTERS[index]), |ui| {
-                amp_controls(ui, setter, amp, index);
+            column(ui, AMP_W, |ui| {
+                panel(ui, &format!("Amp Env {}", LETTERS[index]), |ui| {
+                    amp_controls(ui, setter, amp, index);
+                });
             });
         });
     }
@@ -241,6 +261,18 @@ fn tab_button(ui: &mut egui::Ui, label: &str, on: bool) -> bool {
     .clicked()
 }
 
+fn chain_row_width() -> f32 {
+    OSC_W + FILTER_W + FILTER_ENV_W + AMP_W + COL_GAP * 3.0
+}
+
+/// 横並びの親の中でも、この幅で上から積む。
+fn column(ui: &mut egui::Ui, width: f32, body: impl FnOnce(&mut egui::Ui)) {
+    ui.vertical(|ui| {
+        ui.set_width(width);
+        body(ui);
+    });
+}
+
 fn panel(ui: &mut egui::Ui, title: &str, body: impl FnOnce(&mut egui::Ui)) {
     Frame::new()
         .fill(Color32::from_rgba_unmultiplied(15, 24, 57, 210))
@@ -248,7 +280,6 @@ fn panel(ui: &mut egui::Ui, title: &str, body: impl FnOnce(&mut egui::Ui)) {
         .corner_radius(7.0)
         .inner_margin(10.0)
         .show(ui, |ui| {
-            ui.set_min_width(210.0);
             ui.label(
                 RichText::new(title.to_uppercase())
                     .size(11.0)
@@ -260,39 +291,56 @@ fn panel(ui: &mut egui::Ui, title: &str, body: impl FnOnce(&mut egui::Ui)) {
         });
 }
 
-fn wrapped(ui: &mut egui::Ui, body: impl FnOnce(&mut egui::Ui)) {
-    ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing = vec2(6.0, 8.0);
-        body(ui);
-    });
+/// ノブを決めた個数ごとに改行する。幅の自動折り返しは、列が親の幅まで広がってしまう。
+#[allow(clippy::type_complexity)]
+fn rows(ui: &mut egui::Ui, per_row: usize, mut items: Vec<Box<dyn FnOnce(&mut egui::Ui) + '_>>) {
+    while !items.is_empty() {
+        let count = per_row.min(items.len());
+        let row: Vec<_> = items.drain(..count).collect();
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 6.0;
+            for item in row {
+                item(ui);
+            }
+        });
+        ui.add_space(6.0);
+    }
 }
 
 fn osc_controls(ui: &mut egui::Ui, setter: &ParamSetter, osc: &OscParams) {
-    wrapped(ui, |ui| {
-        control(ui, setter, &osc.on, "On");
-        control(ui, setter, &osc.octave, "Octave");
-        control(ui, setter, &osc.note, "Note");
-        control(ui, setter, &osc.fine, "Fine");
-        control(ui, setter, &osc.volume, "Volume");
-        control(ui, setter, &osc.pan, "Pan");
-        control(ui, setter, &osc.stereo, "Stereo");
-        control(ui, setter, &osc.wave, "Wave");
-        control(ui, setter, &osc.phase, "Phase");
-        control(ui, setter, &osc.inv, "Inv");
-        control(ui, setter, &osc.retrigger, "Retrigger");
-        control(ui, setter, &osc.voices, "Voices");
-        control(ui, setter, &osc.detune, "Detune");
-    });
+    rows(
+        ui,
+        4,
+        vec![
+            Box::new(|ui| control(ui, setter, &osc.on, "On")),
+            Box::new(|ui| control(ui, setter, &osc.octave, "Octave")),
+            Box::new(|ui| control(ui, setter, &osc.note, "Note")),
+            Box::new(|ui| control(ui, setter, &osc.fine, "Fine")),
+            Box::new(|ui| control(ui, setter, &osc.volume, "Volume")),
+            Box::new(|ui| control(ui, setter, &osc.pan, "Pan")),
+            Box::new(|ui| control(ui, setter, &osc.stereo, "Stereo")),
+            Box::new(|ui| control(ui, setter, &osc.wave, "Wave")),
+            Box::new(|ui| control(ui, setter, &osc.phase, "Phase")),
+            Box::new(|ui| control(ui, setter, &osc.inv, "Inv")),
+            Box::new(|ui| control(ui, setter, &osc.retrigger, "Retrigger")),
+            Box::new(|ui| control(ui, setter, &osc.voices, "Voices")),
+            Box::new(|ui| control(ui, setter, &osc.detune, "Detune")),
+        ],
+    );
 }
 
 fn filter_controls(ui: &mut egui::Ui, setter: &ParamSetter, filter: &FilterParams, index: usize) {
-    wrapped(ui, |ui| {
-        control(ui, setter, &filter.kind, "Type");
-        control(ui, setter, &filter.cutoff, "Cutoff");
-        control(ui, setter, &filter.resonance, "Resonance");
-        control(ui, setter, &filter.drive, "Drive");
-        control(ui, setter, &filter.amount, "Amount");
-    });
+    rows(
+        ui,
+        3,
+        vec![
+            Box::new(|ui| control(ui, setter, &filter.kind, "Type")),
+            Box::new(|ui| control(ui, setter, &filter.cutoff, "Cutoff")),
+            Box::new(|ui| control(ui, setter, &filter.resonance, "Resonance")),
+            Box::new(|ui| control(ui, setter, &filter.drive, "Drive")),
+            Box::new(|ui| control(ui, setter, &filter.amount, "Amount")),
+        ],
+    );
     if index == 0 {
         sync_row(
             ui,
@@ -314,6 +362,7 @@ fn filter_env_controls(
     envelope_controls(
         ui,
         setter,
+        4,
         &env.attack,
         &env.attack_curve,
         &env.decay,
@@ -323,7 +372,11 @@ fn filter_env_controls(
         &env.release,
         &env.release_curve,
     );
-    wrapped(ui, |ui| control(ui, setter, &env.amount, "Amount"));
+    rows(
+        ui,
+        4,
+        vec![Box::new(|ui| control(ui, setter, &env.amount, "Amount"))],
+    );
     if index == 0 {
         sync_row(
             ui,
@@ -340,6 +393,7 @@ fn amp_controls(ui: &mut egui::Ui, setter: &ParamSetter, amp: &AmpParams, index:
     envelope_controls(
         ui,
         setter,
+        3,
         &amp.attack,
         &amp.attack_curve,
         &amp.decay,
@@ -358,6 +412,7 @@ fn mod_env_controls(ui: &mut egui::Ui, setter: &ParamSetter, env: &ModEnvParams,
     envelope_controls(
         ui,
         setter,
+        4,
         &env.attack,
         &env.attack_curve,
         &env.decay,
@@ -367,48 +422,61 @@ fn mod_env_controls(ui: &mut egui::Ui, setter: &ParamSetter, env: &ModEnvParams,
         &env.release,
         &env.release_curve,
     );
-    wrapped(ui, |ui| {
-        control(ui, setter, &env.amount, "Amount");
-        control(ui, setter, &env.target, "Target");
-        control(ui, setter, &env.chain, "Chain");
-    });
+    rows(
+        ui,
+        4,
+        vec![
+            Box::new(|ui| control(ui, setter, &env.amount, "Amount")),
+            Box::new(|ui| control(ui, setter, &env.target, "Target")),
+            Box::new(|ui| control(ui, setter, &env.chain, "Chain")),
+        ],
+    );
     if index == 0 {
         sync_row(ui, setter, &env.sync, &env.link_b, &env.link_c, &env.link_d);
     }
 }
 
 fn lfo_controls(ui: &mut egui::Ui, setter: &ParamSetter, lfo: &LfoParams, index: usize) {
-    wrapped(ui, |ui| {
-        control(ui, setter, &lfo.wave, "Wave");
-        control(ui, setter, &lfo.rate, "Rate");
-        control(ui, setter, &lfo.tempo, "Tempo");
-        control(ui, setter, &lfo.phase, "Phase");
-        control(ui, setter, &lfo.retrigger, "Retrigger");
-        control(ui, setter, &lfo.amount, "Amount");
-        control(ui, setter, &lfo.target, "Target");
-        control(ui, setter, &lfo.chain, "Chain");
-    });
+    rows(
+        ui,
+        4,
+        vec![
+            Box::new(|ui| control(ui, setter, &lfo.wave, "Wave")),
+            Box::new(|ui| control(ui, setter, &lfo.rate, "Rate")),
+            Box::new(|ui| control(ui, setter, &lfo.tempo, "Tempo")),
+            Box::new(|ui| control(ui, setter, &lfo.phase, "Phase")),
+            Box::new(|ui| control(ui, setter, &lfo.retrigger, "Retrigger")),
+            Box::new(|ui| control(ui, setter, &lfo.amount, "Amount")),
+            Box::new(|ui| control(ui, setter, &lfo.target, "Target")),
+            Box::new(|ui| control(ui, setter, &lfo.chain, "Chain")),
+        ],
+    );
     if index == 0 {
         sync_row(ui, setter, &lfo.sync, &lfo.link_b, &lfo.link_c, &lfo.link_d);
     }
 }
 
 fn master_controls(ui: &mut egui::Ui, setter: &ParamSetter, master: &MasterParams) {
-    wrapped(ui, |ui| {
-        control(ui, setter, &master.volume, "Master Volume");
-        control(ui, setter, &master.transpose, "Transpose");
-        control(ui, setter, &master.bend, "Bend Range");
-        control(ui, setter, &master.mode, "Mode");
-        control(ui, setter, &master.legato, "Mono Legato");
-        control(ui, setter, &master.portamento, "Portamento");
-        control(ui, setter, &master.polyphony, "Polyphony");
-    });
+    rows(
+        ui,
+        2,
+        vec![
+            Box::new(|ui| control(ui, setter, &master.volume, "Master Volume")),
+            Box::new(|ui| control(ui, setter, &master.transpose, "Transpose")),
+            Box::new(|ui| control(ui, setter, &master.bend, "Bend Range")),
+            Box::new(|ui| control(ui, setter, &master.mode, "Mode")),
+            Box::new(|ui| control(ui, setter, &master.legato, "Mono Legato")),
+            Box::new(|ui| control(ui, setter, &master.portamento, "Portamento")),
+            Box::new(|ui| control(ui, setter, &master.polyphony, "Polyphony")),
+        ],
+    );
 }
 
 #[allow(clippy::too_many_arguments)]
 fn envelope_controls(
     ui: &mut egui::Ui,
     setter: &ParamSetter,
+    per_row: usize,
     attack: &impl Param,
     attack_curve: &impl Param,
     decay: &impl Param,
@@ -418,16 +486,20 @@ fn envelope_controls(
     release: &impl Param,
     release_curve: &impl Param,
 ) {
-    wrapped(ui, |ui| {
-        control(ui, setter, attack, "Attack");
-        control(ui, setter, attack_curve, "Attack Curve");
-        control(ui, setter, decay, "Decay");
-        control(ui, setter, decay_curve, "Decay Curve");
-        control(ui, setter, sustain, "Sustain");
-        control(ui, setter, sustain_curve, "Sustain Curve");
-        control(ui, setter, release, "Release");
-        control(ui, setter, release_curve, "Release Curve");
-    });
+    rows(
+        ui,
+        per_row,
+        vec![
+            Box::new(|ui| control(ui, setter, attack, "Attack")),
+            Box::new(|ui| control(ui, setter, attack_curve, "Attack Curve")),
+            Box::new(|ui| control(ui, setter, decay, "Decay")),
+            Box::new(|ui| control(ui, setter, decay_curve, "Decay Curve")),
+            Box::new(|ui| control(ui, setter, sustain, "Sustain")),
+            Box::new(|ui| control(ui, setter, sustain_curve, "Sustain Curve")),
+            Box::new(|ui| control(ui, setter, release, "Release")),
+            Box::new(|ui| control(ui, setter, release_curve, "Release Curve")),
+        ],
+    );
 }
 
 fn sync_row(
@@ -439,12 +511,16 @@ fn sync_row(
     link_d: &impl Param,
 ) {
     ui.add_space(4.0);
-    wrapped(ui, |ui| {
-        control(ui, setter, sync, "Sync");
-        control(ui, setter, link_b, "B");
-        control(ui, setter, link_c, "C");
-        control(ui, setter, link_d, "D");
-    });
+    rows(
+        ui,
+        2,
+        vec![
+            Box::new(|ui| control(ui, setter, sync, "Sync")),
+            Box::new(|ui| control(ui, setter, link_b, "B")),
+            Box::new(|ui| control(ui, setter, link_c, "C")),
+            Box::new(|ui| control(ui, setter, link_d, "D")),
+        ],
+    );
 }
 
 /// 選択肢はボタン、数値の幅が広いものは丸いノブにする。
@@ -457,7 +533,7 @@ fn control(ui: &mut egui::Ui, setter: &ParamSetter, param: &impl Param, label: &
 
 fn knob(ui: &mut egui::Ui, setter: &ParamSetter, param: &impl Param, label: &str) {
     ui.vertical(|ui| {
-        ui.set_width(72.0);
+        ui.set_width(56.0);
         let (rect, response) = ui.allocate_exact_size(Vec2::splat(34.0), Sense::click_and_drag());
         let id = response.id;
         if response.double_clicked() {
@@ -529,7 +605,7 @@ fn paint_knob(ui: &egui::Ui, center: egui::Pos2, normalized: f32) {
 
 fn choice(ui: &mut egui::Ui, setter: &ParamSetter, param: &impl Param, label: &str) {
     ui.vertical(|ui| {
-        ui.set_min_width(54.0);
+        ui.set_width(56.0);
         let value = param.normalized_value_to_string(param.unmodulated_normalized_value(), false);
         let on = param.step_count() == Some(1) && param.unmodulated_normalized_value() > 0.5;
         let fill = if on { ON } else { NAVY };
@@ -540,7 +616,7 @@ fn choice(ui: &mut egui::Ui, setter: &ParamSetter, param: &impl Param, label: &s
                     .fill(fill)
                     .stroke(Stroke::new(1.0, if on { ON } else { LINE }))
                     .corner_radius(6.0)
-                    .min_size(vec2(54.0, 24.0)),
+                    .min_size(vec2(56.0, 24.0)),
             )
             .clicked();
         if clicked {

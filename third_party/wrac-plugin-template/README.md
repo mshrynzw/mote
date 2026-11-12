@@ -1,0 +1,126 @@
+# WRAC Plugin Template
+
+A template for implementing audio plugins with the WRAC stack.
+You can copy this repository as a starting point for new projects.
+
+> 日本語版: [README_JA.md](README_JA.md)
+
+<img width="500" alt="wrac_gain" src="https://github.com/user-attachments/assets/4797b197-79ce-42d5-ab97-871eb3913db7" />
+
+
+# What is the WRAC Stack?
+
+The WRAC stack is a technology stack for audio plugin development, built around three core components: **Webview, Rust Audio, and CLAP**.
+
+**W** (WebView): User interface implementation using HTML/CSS/JS.
+
+**RA** (Rust Audio): Audio signal processing implementation in Rust.
+
+**C** (CLAP): Interface with host applications via the CLever Audio Plug-in standard.
+
+## Why WRAC?
+
+Audio plugins have requirements that ordinary desktop WebView apps do not have: support for many DAWs and plugin formats, cooperative behavior with host applications, and hard real-time requirements on the audio thread.
+
+It took our team a lot of iteration to satisfy those requirements with a WebView + Rust architecture.
+Other developers should not have to repeat the same trial and error. With this template, you can start from working code that NovoNotes uses in production.
+
+## Contents
+
+The code in this repository implements a simple plugin called WRAC Gain.
+It is also structured so it can be used as a template.
+
+Main dependencies:
+
+- CLAP plugin implementation in Rust using [clap-sys](https://github.com/micahrj/clap-sys)
+- WebView GUI implementation using [wxp](https://github.com/novonotes/wxp)
+- VST3 / AU / AAX plugin builds and a development standalone app via [clap-wrapper](https://github.com/free-audio/clap-wrapper)
+
+## Quick Start
+
+Want to try the bundled WRAC Gain plugin before building your own? Follow the minimal steps below.
+With just Rust and Node.js you should be able to build CLAP.
+For the prerequisites to build VST3 / AU / AAX or the development standalone app, see the [Setup doc](docs/setup.md#prerequisites).
+
+```sh
+# Clone the template. Add --recursive if you plan to build VST3 / AU / AAX or the development standalone app.
+git clone https://github.com/novonotes/wrac-plugin-template.git
+cd wrac-plugin-template
+
+# Build and install CLAP only for the minimal first run.
+cargo xtask install --target=clap
+
+# Debug builds load the GUI from the Vite dev server, so start it before launching your DAW
+cd plugins/wrac-gain/src-gui
+npm install
+npm run dev
+```
+
+Then launch your DAW and insert **WRAC Gain** (a plugin rescan may be required).
+
+To build your own plugin based on this template, see [Setup](docs/setup.md).
+
+## FAQ
+
+### Why WebView instead of a GPU-native UI stack?
+
+For production plugins, reducing uncertainty was the main reason. The situation we most want to avoid is encountering a DAW-specific issue just before a product release without knowing whether it can be solved technically. The web platform is mature, and its benefits and limitations are relatively well understood in both desktop applications and audio plugin UIs. GPU-native UI stacks such as wgpu are promising, but there is still less evidence to rely on for commercial use in DAW-hosted plugin environments.
+
+### Is this a framework?
+
+No. This repository is an implementation example and starting point, not a general-purpose framework. As a result, it does not provide a broad high-level API, and the adapter layers are intentionally kept thin. Adapting it to your own project should usually be straightforward. For the same reason, future changes will not provide API backwards compatibility or migration support.
+
+### Can I use this for commercial plugins?
+
+Yes. This repository is licensed under the MIT License, which permits commercial use. Open-source, freeware, and commercial releases built from this template are all welcome.
+
+### What about AAX and AUv3 support?
+
+AAX is supported. See [AAX Build and Validation](docs/aax.md).
+AUv3 support is still ongoing.
+
+## Build
+
+Common commands:
+
+```bash
+# Debug build for all plugin formats and the development standalone app
+cargo xtask build
+# Release build for all plugin formats and the development standalone app
+cargo xtask build --release
+# Debug build for VST3 only
+cargo xtask build --target=vst3
+# Release build for AU
+cargo xtask build --target=au --release
+# Debug build with Cargo features enabled on the plugin crate
+cargo xtask build --features my-feature
+# Build and validate plugins
+cargo xtask validate
+# Build and install plugins
+cargo xtask install
+# Build and launch the development standalone app
+cargo xtask launch
+```
+
+Supported plugin formats:
+
+| OS | Supported formats |
+|----|---------------------------|
+| macOS | CLAP / VST3 / AU / AAX |
+| Windows | CLAP / VST3 / AAX |
+| Linux | CLAP / VST3 |
+
+For detailed usage:
+
+```bash
+# Overall help
+cargo xtask --help
+# Subcommand help
+cargo xtask build --help
+```
+
+## Reference
+
+For known DAW compatibility status, see the [DAW Compatibility Matrix](https://github.com/novonotes/wrac-plugin-template/wiki/DAW-Compatibility-Matrix).
+
+For usage of the wxp crate, see the [wxp README](https://github.com/novonotes/wxp/tree/main/crates/wxp).

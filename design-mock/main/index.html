@@ -44,7 +44,7 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-html { background: var(--bg); scrollbar-gutter: stable; }
+html { background: rgb(15 24 57); overflow-x: hidden; }
 body {
   margin: 0;
   padding-block: 24px;
@@ -67,11 +67,12 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
 /* ---------- Sky ---------- */
 #sky {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
   z-index: 0;
   display: block;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   pointer-events: none;
   visibility: hidden;       /* shown once the first frame is drawn */
 }
@@ -818,7 +819,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           <div class="cells">
             <div class="ctl"><i class="k bi"></i><span>Octave</span></div>
             <div class="ctl"><i class="k bi"></i><span>Note</span></div>
-            <div class="ctl shift"><i class="k bi" style="--a:24deg"></i><span>Fine</span></div>
+            <div class="ctl shift"><i class="k bi"></i><span>Fine</span></div>
           </div>
         </div>
         <div class="grp">
@@ -870,9 +871,9 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
             <i style="--px:-.3;--py:-.667;--wx:-1.2px;--wy:1.2px;--dur:9s;--del:-3s"></i>
             <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
           </div>
-          <div class="ctl"><i class="k" style="--a:18deg"></i><span>Voices</span></div>
-          <div class="ctl"><i class="k" style="--a:-42deg"></i><span>Detune</span></div>
-          <div class="ctl"><i class="k" style="--a:-18deg"></i><span>Stereo</span></div>
+          <div class="ctl"><i class="k" style="--a:-135deg"></i><span>Voices</span></div>
+          <div class="ctl"><i class="k" style="--a:-135deg"></i><span>Detune</span></div>
+          <div class="ctl"><i class="k" style="--a:-135deg"></i><span>Stereo</span></div>
         </div>
       </div>
     </section>
@@ -983,7 +984,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           <div class="cells">
             <div class="ctl"><i class="k bi"></i><span>Octave</span></div>
             <div class="ctl"><i class="k bi"></i><span>Note</span></div>
-            <div class="ctl shift"><i class="k bi" style="--a:24deg"></i><span>Fine</span></div>
+            <div class="ctl shift"><i class="k bi"></i><span>Fine</span></div>
           </div>
         </div>
         <div class="grp">
@@ -1035,9 +1036,9 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
             <i style="--px:-.3;--py:-.667;--wx:-1.2px;--wy:1.2px;--dur:9s;--del:-3s"></i>
             <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
           </div>
-          <div class="ctl"><i class="k" style="--a:18deg"></i><span>Voices</span></div>
-          <div class="ctl"><i class="k" style="--a:-42deg"></i><span>Detune</span></div>
-          <div class="ctl"><i class="k" style="--a:-18deg"></i><span>Stereo</span></div>
+          <div class="ctl"><i class="k" style="--a:-135deg"></i><span>Voices</span></div>
+          <div class="ctl"><i class="k" style="--a:-135deg"></i><span>Detune</span></div>
+          <div class="ctl"><i class="k" style="--a:-135deg"></i><span>Stereo</span></div>
         </div>
       </div>
     </section>
@@ -1130,7 +1131,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           <div class="cells">
             <div class="ctl"><i class="k bi"></i><span>Octave</span></div>
             <div class="ctl"><i class="k bi"></i><span>Note</span></div>
-            <div class="ctl shift"><i class="k bi" style="--a:24deg"></i><span>Fine</span></div>
+            <div class="ctl shift"><i class="k bi"></i><span>Fine</span></div>
           </div>
         </div>
         <div class="grp">
@@ -1182,9 +1183,9 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
             <i style="--px:-.3;--py:-.667;--wx:-1.2px;--wy:1.2px;--dur:9s;--del:-3s"></i>
             <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
           </div>
-          <div class="ctl"><i class="k" style="--a:18deg"></i><span>Voices</span></div>
-          <div class="ctl"><i class="k" style="--a:-42deg"></i><span>Detune</span></div>
-          <div class="ctl"><i class="k" style="--a:-18deg"></i><span>Stereo</span></div>
+          <div class="ctl"><i class="k" style="--a:-135deg"></i><span>Voices</span></div>
+          <div class="ctl"><i class="k" style="--a:-135deg"></i><span>Detune</span></div>
+          <div class="ctl"><i class="k" style="--a:-135deg"></i><span>Stereo</span></div>
         </div>
       </div>
     </section>
@@ -1277,7 +1278,7 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
           <div class="cells">
             <div class="ctl"><i class="k bi"></i><span>Octave</span></div>
             <div class="ctl"><i class="k bi"></i><span>Note</span></div>
-            <div class="ctl shift"><i class="k bi" style="--a:24deg"></i><span>Fine</span></div>
+            <div class="ctl shift"><i class="k bi"></i><span>Fine</span></div>
           </div>
         </div>
         <div class="grp">
@@ -1329,9 +1330,9 @@ h1, h2, h3, p { margin: 0; font-weight: inherit; }
             <i style="--px:-.3;--py:-.667;--wx:-1.2px;--wy:1.2px;--dur:9s;--del:-3s"></i>
             <i style="--px:-.9;--py:-1;--wx:1.4px;--wy:-1px;--dur:12.5s;--del:-6s"></i>
           </div>
-          <div class="ctl"><i class="k" style="--a:18deg"></i><span>Voices</span></div>
-          <div class="ctl"><i class="k" style="--a:-42deg"></i><span>Detune</span></div>
-          <div class="ctl"><i class="k" style="--a:-18deg"></i><span>Stereo</span></div>
+          <div class="ctl"><i class="k" style="--a:-135deg"></i><span>Voices</span></div>
+          <div class="ctl"><i class="k" style="--a:-135deg"></i><span>Detune</span></div>
+          <div class="ctl"><i class="k" style="--a:-135deg"></i><span>Stereo</span></div>
         </div>
       </div>
     </section>

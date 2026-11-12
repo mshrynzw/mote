@@ -1,1 +1,5 @@
 /target
+/third_party/wrac-plugin-template/.git-template-backup/
+/third_party/wrac-plugin-template/clap_wrapper_builder/
+/third_party/wrac-plugin-template/plugins/mote/src-gui/node_modules/
+/third_party/wrac-plugin-template/plugins/mote/.log/

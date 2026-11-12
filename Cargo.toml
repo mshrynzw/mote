@@ -5,12 +5,18 @@ edition = "2021"
 publish = false
 description = "Mote, a wavetable synthesizer."
 
+[features]
+default = ["plugin"]
+# nice-plug の VST3 / CLAP 出口。WRAC 版はこの機能を外して音のエンジンだけ使う。
+# 割り当て監視もこの出口だけに置く。WRAC 側が同じ監視を持つため、両方に置くとビルドできない。
+plugin = ["nice-plug/assert_process_allocs"]
+
 [lib]
 crate-type = ["cdylib", "lib"]
 
 [dependencies]
 egui = { version = "0.37.0", features = ["default_fonts"] }
-nice-plug = { version = "0.4.2", features = ["assert_process_allocs"] }
+nice-plug = { version = "0.4.2" }
 nice-plug-egui = { version = "0.6.0", default-features = false, features = ["opengl"] }
 
 [profile.dev]

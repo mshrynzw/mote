@@ -115,7 +115,7 @@ impl OscParams {
             ),
             inv: BoolParam::new(name("Inv"), false),
             retrigger: BoolParam::new(name("Retrigger"), false),
-            voices: IntParam::new(name("Voices"), 1, IntRange::Linear { min: 1, max: 16 }),
+            voices: IntParam::new(name("Voices"), 0, IntRange::Linear { min: 0, max: 16 }),
             detune: FloatParam::new(
                 name("Detune"),
                 0.0,
@@ -196,6 +196,7 @@ impl Oscillator {
             return (0.0, 0.0);
         };
 
+        // 初期値の 0 も、1 本として鳴らす。
         let voices = (params.voices.value() as usize).clamp(1, MAX_UNISON);
         let wave = params.wave.value();
         let invert = if params.inv.value() { -1.0 } else { 1.0 };

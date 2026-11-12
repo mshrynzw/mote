@@ -1,0 +1,42 @@
+# Product-owned WRAC manifest for the example plugin.
+#
+# This file is the source of truth for host-visible metadata and wrapper
+# descriptors. Build scripts and xtask read it through the `wrac_manifest` crate
+# to generate CLAP/VST3/AU/AAX descriptors and decide the default build targets.
+# Keep public IDs stable after release; changing them can break host project
+# recall.
+schema_version = 1
+
+[bundle]
+company_name = "mshrynzw"
+auv2_manufacturer_code = "Mshz"
+aax_manufacturer_id = "Mshz"
+bundle_name = "Mote"
+bundle_identifier = "com.mshrynzw.mote"
+homepage_url = "https://github.com/mshrynzw/mote"
+manual_url = "https://github.com/mshrynzw/mote"
+support_url = "https://github.com/mshrynzw/mote"
+description = "Mote, a wavetable synthesizer."
+copyright = "Copyright 2026 mshrynzw"
+formats = [
+  { type = "clap", distribution = "public" },
+  { type = "vst3", distribution = "public" },
+  { type = "au", distribution = "public" },
+  { type = "aax", distribution = "public" },
+]
+
+[[plugins]]
+plugin_id = "com.mshrynzw.mote"
+plugin_name = "Mote"
+clap_features = ["instrument", "synthesizer", "stereo"]
+vst3_subcategories = "Instrument|Synth"
+vst3_component_id = "4d6f7465-2e50-6861-7365-312e53696e65"
+standalone_name = "Mote"
+auv2_type = "aumu"
+auv2_subtype = "WtGn"
+aax_categories = ["effect"]
+aax_product_id = "WtGn"
+aax_stem_configs = [
+  { name = "Mono", input = "mono", output = "mono", plugin_id = "WtGM" },
+  { name = "Stereo", input = "stereo", output = "stereo", plugin_id = "WtGS" },
+]

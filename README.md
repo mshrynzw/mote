@@ -11,20 +11,21 @@ Phase 2 の途中です。オシレーターは 4 基で、Classic（サイン�
 
 ## ビルド
 
-Rust 1.88 以降が必要です。初回だけ、バンドル用のコマンドを入れます。
+画面つきの VST3 は、`third_party/wrac-plugin-template` で作る。
 
 ```sh
-cargo install cargo-nice-plug --version 0.1.1 --locked
+cargo xtask build -p mote_plugin --release --target=vst3
 ```
 
-テストと、VST3 / CLAP の作成は次です。
+成果物は `target/wrac-plugins/mote/wrac/plugins/release/Mote.vst3` である。
 
-```sh
-cargo test
-cargo nice-plug bundle mote --release
-```
+開発中は、FL Studio のプラグイン一覧を、この中の `Contents\x86_64-win\Mote.vst3` へ直接向ける。VST3 フォルダへはコピーしない。ビルドする前に、Mote を開いた FL Studio は閉じる。開いたままだとファイルを掴んで書き込めない。
 
-成果物は `target/bundled/mote.vst3` と `target/bundled/mote.clap` です。Cubase 13 か FL Studio のプラグイン検索パスに `target/bundled` を追加するか、`mote.vst3` を VST3 フォルダへコピーして読み込みます。MIDI のノートオンでサイン波が出て、そのノートのノートオフで止まります。
+開発が終わったら、`Mote.vst3` を `C:\Program Files\Common Files\VST3` へ置き、一覧の次の3か所にある `ps_file_filename_0` を、置いたパスへ戻す。
+
+- `%USERPROFILE%\Documents\Image-Line\FL Studio\Presets\Plugin database\Installed\.Plugins.ini`
+- `%USERPROFILE%\Documents\Image-Line\FL Studio\Presets\Plugin database\Installed\Generators\VST3\Mote.nfo`
+- `%USERPROFILE%\Documents\Image-Line\FL Studio\Presets\Plugin database\Installed\Generators\New\Mote.nfo`
 
 Phase 2 以降の範囲、日程、要件、設計の詳細は、Phase 1 が鳴ったあとに [docs/design.md](docs/design.md) の方針どおり `docs` へ足します。
 

@@ -12,6 +12,7 @@ use std::sync::Arc;
 
 mod assign;
 mod editor;
+mod engine;
 mod envelope;
 mod filter;
 mod filter_env;
@@ -24,6 +25,7 @@ mod unison;
 mod voice;
 mod wavetable;
 
+pub use engine::{Engine, SharedEngine};
 use params::MoteParams;
 use voice::Voices;
 use editor::MoteEditor;
@@ -240,5 +242,8 @@ impl Vst3Plugin for Mote {
 }
 
 // これらのマクロが、DAW から読める CLAP と VST3 の入口関数を生成する。
+// WRAC 版は別クレートなので、そちらではこの出口を出さない。
+#[cfg(feature = "plugin")]
 nice_export_clap!(Mote);
+#[cfg(feature = "plugin")]
 nice_export_vst3!(Mote);

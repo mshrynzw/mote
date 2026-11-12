@@ -1,0 +1,122 @@
+# WRAC Plugin Template
+
+WRAC スタックによってオーディオプラグインを実装するためのテンプレートです。
+コピーして新規プロジェクトの出発点として使うことが可能です。
+
+> English version: [README.md](README.md)
+
+# WRAC スタックとは
+
+WRAC スタックとは、 **Webview, Rust Audio, CLAP** の三つを中心に構成される、オーディオプラグイン開発の技術スタックです。
+
+**W** (WebView): HTML/CSS/JS を用いたユーザーインターフェースの実装。
+
+**RA** (Rust Audio): Rust 言語による音声信号処理の実装。
+
+**C** (CLAP): CLever Audio Plug-in 規格によるホストアプリケーションとのインターフェース。
+
+## なぜ WRAC か
+
+オーディオプラグインには、通常のデスクトップ WebView アプリにはない要件があります。多数の DAW やプラグインフォーマットへの対応、ホストアプリケーションとの協調的な動作、audio thread のハードリアルタイム要件などです。
+
+私たちのチームが WebView + Rust の構成でこれらを満たすには試行錯誤が必要でした。
+しかし、皆が同じ試行錯誤を繰り返す必要はありません。このテンプレートを使えば、NovoNotes が実運用で使っている「動くコード」から開発を始められます。
+
+## このレポジトリに含まれるもの
+
+初期実装として WRAC Gain というシンプルなプラグインが実装されています。
+テンプレートとしても使えるように配慮しています。
+
+主な依存:
+- [clap-sys](https://github.com/micahrj/clap-sys) を用いた Rust による CLAP プラグイン実装
+- [wxp](https://github.com/novonotes/wxp) を用いた WebView GUI 実装
+- [clap-wrapper](https://github.com/free-audio/clap-wrapper) による VST3 / AU / AAX プラグインのビルドと開発用 standalone app
+
+## クイックスタート
+
+自分のプラグインを作る前に、同梱の WRAC Gain プラグインをまず動かしてみたい方は、以下の最小手順をお試しください。
+最低限 Rust と Node.js があれば、CLAP はビルドできるはずです。
+VST3 / AU / AAX、または開発用 standalone app をビルドする場合の前提条件は [Setup ドキュメント](docs/setup-ja.md#前提条件) を参照してください。
+
+```sh
+# テンプレートを clone（VST3 / AU / AAX、または開発用 standalone app をビルドする場合は --recursive を追加してください）
+git clone https://github.com/novonotes/wrac-plugin-template.git
+cd wrac-plugin-template
+
+# 最小確認として CLAP だけをビルドしてインストール
+cargo xtask install --target=clap
+
+# デバッグビルドは Vite dev server から GUI を読み込むため、DAW を起動する前に立ち上げてください
+cd plugins/wrac-gain/src-gui
+npm install
+npm run dev
+```
+
+その後、DAW を起動して **WRAC Gain** を挿入してください（プラグインの再スキャンが必要な場合があります）。
+
+このテンプレートを元に自分のプラグインを作る場合は [Setup](docs/setup-ja.md) を参照してください。
+
+## FAQ
+
+### なぜ GPU ネイティブな UI スタックではなく WebView なのか
+
+実運用のプラグインでは、不確実性の低さしやすさを重視しました。一番避けたいのは、技術的に解決できるか分からないDAW固有の不具合を、製品リリース直前に踏むことです。Web プラットフォームは成熟しており、デスクトップアプリでも、オーディオプラグイン UI の文脈でも利点と制約が比較的よく知られています。wgpu のような GPU ネイティブな UI スタックは有望ですが、DAW にホストされるプラグイン環境という条件下では、まだ商用レベルの運用のための予測材料が少ないと考えています。
+
+### これはフレームワークですか
+
+いいえ。このリポジトリは汎用的なフレームワークではなく、実装例を兼ねた出発点です。そのため、包括的な高レベル API は提供せず、アダプタ層を意図的に薄く保っています。自分のプロジェクトに合わせて調整する負担は小さいはずです。同じ理由で、今後の変更に伴う API の後方互換性やマイグレーションサポートは提供しません。
+
+### 商用プラグインに使えますか
+
+はい。このリポジトリは MIT License で公開されており、商用利用が可能です。このテンプレートを元にしたオープンソース、フリーウェア、商用リリースのいずれも歓迎です。
+
+### AAX / AUv3 対応はありますか
+
+AAX 対応ずみです。詳細は [AAX Build and Validation](docs/aax-ja.md) を参照してください。
+AUv3 対応はまだ進行中です。
+
+## ビルド
+
+代表的なコマンド:
+
+```bash
+# 全プラグインフォーマットと開発用 standalone app のデバッグビルド
+cargo xtask build
+# 全プラグインフォーマットと開発用 standalone app のリリースビルド
+cargo xtask build --release
+# VST3 のみデバッグビルド
+cargo xtask build --target=vst3
+# AU をリリースビルド
+cargo xtask build --target=au --release
+# プラグインのクレートで Cargo feature を有効にしてデバッグビルド
+cargo xtask build --features my-feature
+# プラグインをビルドして検証
+cargo xtask validate
+# プラグインをビルドしてインストール
+cargo xtask install
+# 開発用 standalone app をビルドして起動
+cargo xtask launch
+```
+
+対応プラグインフォーマット:
+
+| OS | サポートフォーマット  |
+|----|---------------------------|
+| macOS | CLAP / VST3 / AU / AAX |
+| Windows | CLAP / VST3 / AAX |
+| Linux | CLAP / VST3 |
+
+詳しい使い方:
+
+```bash
+# 全体のヘルプ
+cargo xtask --help
+# サブコマンドのヘルプ
+cargo xtask build --help
+```
+
+## 参考
+
+主要 DAW での動作確認状況は [Wiki](https://github.com/novonotes/wrac-plugin-template/wiki/DAW-Compatibility-Matrix) を参照してください。
+
+wxp クレートの使い方は [wxp の README](https://github.com/novonotes/wxp/tree/main/crates/wxp) に記載しています。

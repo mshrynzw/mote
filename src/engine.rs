@@ -2,8 +2,11 @@
 //!
 //! ノブは `MoteParams` の原子的な値を画面スレッドが書き、発音中は `Voices` が読む。
 //! パラメータ名の検索は画面スレッドだけが行う。
+//! 音の 1 サンプルは `Engine::next_sample` が進める。
 
+// ロック無しで共有する整数。`Ordering` は読み書きの厳しさ。
 use std::sync::atomic::{AtomicU32, AtomicU64, AtomicUsize, Ordering};
+// 画面とオーディオで同じ `SharedEngine` を指すための共有ポインタ。
 use std::sync::Arc;
 
 use nice_plug::prelude::*;
@@ -16,14 +19,19 @@ const NOTE_CAPACITY: usize = 64;
 
 /// 画面と音が共有するノブ。`Voices` 自体はオーディオスレッドだけが持つ。
 pub struct SharedEngine {
+    /// ホストと画面が触るノブ一覧。
     params: Arc<MoteParams>,
+    /// `f32` のビット列。原子的に読むために `AtomicU32` に入れる。
     sample_rate: AtomicU32,
+    /// 画面が積んだノートオン／オフ。
     notes: NoteRing,
 }
 
 impl SharedEngine {
+    /// 起動時に 1 回作る。`Arc` で画面とオーディオの両方から触る。
     pub fn new() -> Arc<Self> {
         let params = Arc::new(MoteParams::default());
+        // Sync のコピー先を結ぶ。結ぶ前は、4 基の住所がまだ決まらない。
         params.bind_amp_sync();
         params.bind_filter_sync();
         params.bind_filter_env_sync();
@@ -31,6 +39,7 @@ impl SharedEngine {
         params.bind_lfo_sync();
         let shared = Arc::new(Self {
             params,
+            // 仮の 48 kHz。activate でホストの値に上書きする。
             sample_rate: AtomicU32::new(48_000.0_f32.to_bits()),
             notes: NoteRing::new(),
         });
@@ -38,10 +47,12 @@ impl SharedEngine {
         shared
     }
 
+    /// `&self` は借りるだけ。値は書き換えない。
     pub fn sample_rate(&self) -> f32 {
         f32::from_bits(self.sample_rate.load(Ordering::Relaxed))
     }
 
+    /// サンプルレートを覚え、ノブの smoother をその速さに合わせる。
     pub fn set_sample_rate(&self, sample_rate: f32) {
         self.sample_rate
             .store(sample_rate.to_bits(), Ordering::Relaxed);
@@ -49,13 +60,17 @@ impl SharedEngine {
     }
 
     /// `id` は `o1_volume` のような、nice-plug が公開している名前。値は 0 から 1。
+    ///
+    /// 名前の検索は画面スレッド向け。見つかれば true。
     pub fn set_normalized(&self, id: &str, normalized: f32) -> bool {
         let normalized = normalized.clamp(0.0, 1.0);
         let map = self.params.param_map();
+        // `let Some(...) else` は、無ければすぐ戻る書き方。
         let Some((_, ptr, _)) = map.iter().find(|(name, _, _)| name == id) else {
             return false;
         };
         let sample_rate = self.sample_rate();
+        // nice-plug 内部 API。画面スレッドからのみ触る。
         unsafe {
             ptr._internal_set_normalized_value(normalized);
             ptr._internal_update_smoother(sample_rate, false);
@@ -73,6 +88,7 @@ impl SharedEngine {
         self.notes.push(pack_note(false, key, 0.0))
     }
 
+    /// `Option` は「まだノートが無ければ None」。
     fn pop_note(&self) -> Option<(bool, u8, f32)> {
         self.notes.pop().map(unpack_note)
     }
@@ -94,6 +110,7 @@ pub struct Engine {
 }
 
 impl Engine {
+    /// ホストが再生を始めるときに 1 回。重い準備はここまで。
     pub fn activate(shared: Arc<SharedEngine>, sample_rate: f32) -> Self {
         shared.set_sample_rate(sample_rate);
         let mut voices = Voices::new();
@@ -102,7 +119,10 @@ impl Engine {
     }
 
     /// 画面から積まれたノートを、このブロックの頭で発音へ渡す。
+    ///
+    /// `&mut self` は `Voices` を書き換えるため。
     pub fn drain_gui_notes(&mut self) {
+        // `while let Some` は、値が取れるあいだ繰り返す。
         while let Some((on, key, velocity)) = self.shared.pop_note() {
             if on {
                 self.note_on(key, velocity);
@@ -119,6 +139,7 @@ impl Engine {
             .note_on(key, velocity, &oscs, &lfos, &self.shared.params.master);
     }
 
+    /// `key` が `None` のときは、鳴っている音をすべて離す。
     pub fn note_off(&mut self, key: Option<u8>) {
         let oscs = self.shared.params.oscillators();
         let lfos = self.shared.params.lfos();
@@ -134,6 +155,7 @@ impl Engine {
         self.voices.set_transport(tempo, numerator);
     }
 
+    /// 左右のサンプルを 1 つ進める。WRAC のオーディオ処理から繰り返し呼ばれる。
     pub fn next_sample(&mut self) -> (f32, f32) {
         let oscs = self.shared.params.oscillators();
         let filters = self.shared.params.filters();
@@ -200,6 +222,8 @@ mod tests {
 }
 
 /// 画面スレッドが書き、オーディオスレッドが読む。起動時に枠だけ確保する。
+///
+/// リングバッファ。満杯なら新しいノートは捨てる。
 struct NoteRing {
     slots: Box<[AtomicU64; NOTE_CAPACITY]>,
     write: AtomicUsize,
@@ -209,12 +233,14 @@ struct NoteRing {
 impl NoteRing {
     fn new() -> Self {
         Self {
+            // `from_fn` は添字ごとに初期値を作る。ここは全部 0。
             slots: Box::new(std::array::from_fn(|_| AtomicU64::new(0))),
             write: AtomicUsize::new(0),
             read: AtomicUsize::new(0),
         }
     }
 
+    /// 書けたら true。満杯なら false。
     fn push(&self, packed: u64) -> bool {
         let write = self.write.load(Ordering::Relaxed);
         let read = self.read.load(Ordering::Acquire);
@@ -226,6 +252,7 @@ impl NoteRing {
         true
     }
 
+    /// 空なら `None`。
     fn pop(&self) -> Option<u64> {
         let read = self.read.load(Ordering::Relaxed);
         let write = self.write.load(Ordering::Acquire);
@@ -238,6 +265,7 @@ impl NoteRing {
     }
 }
 
+/// オン／オフ・キー・ベロシティを 1 つの `u64` に詰める。
 fn pack_note(on: bool, key: u8, velocity: f32) -> u64 {
     let velocity = (velocity.clamp(0.0, 1.0) * 65535.0).round() as u16;
     u64::from(key) | (u64::from(u8::from(on)) << 8) | (u64::from(velocity) << 16)

@@ -1,7 +1,7 @@
 //! Mod Env。4 基のエンベロープ。
 //!
-//! 時間の計算は Amp Env と同じ。行き先は、LFO のあとの割り当てで決める。
-//! ここではノブと Sync だけを持ち、音の計算にはまだ足さない。
+//! 時間の計算は Amp Env と同じ。行き先は Target / Chain（`assign`）で決める。
+//! `voice` が `ModEnv::next` で高さを進め、`scaled_amount` で深さを掛けて割り当てる。
 
 use std::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
 use std::sync::Arc;
@@ -51,7 +51,9 @@ impl ModEnv {
         self.envelope.release();
     }
 
-    /// いまの高さ。0 が始まり、Sustain がその高さで留まる。
+    /// いまの高さを 1 サンプル進める。0 が始まり、Sustain がその高さで留まる。
+    ///
+    /// `&mut self` は内側の Amp Env を進めるため。
     pub fn next(&mut self, params: &ModEnvParams, sample_rate: f32) -> f32 {
         self.envelope.next(params.settings(), sample_rate.max(1.0))
     }

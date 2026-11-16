@@ -1,8 +1,9 @@
 //! LFO。4 基の周期的な変調。
 //!
 //! Tempo がオフのとき Rate は Hz。オンのとき、同じノブ位置が音符の長さになる。
-//! 行き先は次の割り当てで決める。ここでは波を計算するが、音にはまだ足さない。
+//! 行き先は Target / Chain（`assign`）で決める。`voice` が位相を進め、波を割り当てへ渡す。
 
+// 1 周をラジアンにするときに使う。
 use std::f32::consts::TAU;
 use std::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
 use std::sync::Arc;
@@ -172,6 +173,8 @@ impl LfoPhase {
     }
 
     /// 1 サンプル進めて、Amount を掛ける前の波を返す。
+    ///
+    /// `&mut self` は位相と Sample & Hold の値を書き換えるため。
     pub fn advance(&mut self, hz: f32, sample_rate: f32, wave: LfoWave, phase_offset: f32) -> f32 {
         let rate = if sample_rate > 0.0 { sample_rate } else { 1.0 };
         let step = if hz.is_finite() {

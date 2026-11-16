@@ -2,13 +2,16 @@
 //!
 //! Unison は最大 16 Voice。その位相は起動時に配列で持っておく。
 //! ノコギリ、パルス、三角は波形表を読む。サインだけその場で計算する。
+//! 音の 1 サンプルは `Oscillator::next_sample` が進める。
 
 use nice_plug::prelude::*;
+// 円周率の 2 倍。サインの位相をラジアンにするときに使う。
 use std::f32::consts::TAU;
 
 use crate::unison::{unison_cents, unison_offset};
 use crate::wavetable::{TableShape, WaveBank};
 
+/// Unison の上限。起動時にこの本数分の位相枠を確保する。
 pub const MAX_UNISON: usize = 16;
 
 /// 割り当てがオシレーターへ足す分。0 ならノブどおり。
@@ -169,7 +172,8 @@ impl Oscillator {
     }
 
     /// 左右のサンプルを 1 つ返す。鳴っていないときは `(0, 0)` だが、ノブの追従は進める。
-    /// `touch` は割り当てからの足し分で、ノブには書き戻さない。
+    ///
+    /// `&mut self` は位相を進めるため。`touch` は割り当てからの足し分で、ノブには書き戻さない。
     pub fn next_sample(
         &mut self,
         params: &OscParams,
@@ -192,6 +196,7 @@ impl Oscillator {
         }
         let pitch_cents = self.pitch_cents.next();
 
+        // `Option` が無い（ノート無し）なら無音。smoother は上ですでに進めた。
         let Some(note) = midi_note else {
             return (0.0, 0.0);
         };

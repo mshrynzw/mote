@@ -1,10 +1,15 @@
 //! Mod Env と LFO の割り当て。
 //!
-//! 各ソースは Target を 1 つ、Chain を 1 つ持つ。結果はノブへ書き戻さない。
+//! 各ソースは Target を 1 つ、Chain を 1 つ持つ。
+//! `fold` が 4 列分の足し分を作り、`voice` がオシレーターやフィルターへ渡す。
+//! 結果はノブへ書き戻さない。
 
+// `Enum` など、パラメータ用の型をまとめて読み込む。
 use nice_plug::prelude::*;
 
 /// 変調の行き先。Off では音を変えない。
+///
+/// `#[derive(Enum)]` は、ホストの一覧に出せる列挙型にする印。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Enum)]
 pub enum ModTarget {
     #[id = "off"]
@@ -23,7 +28,7 @@ pub enum ModTarget {
     Amp,
 }
 
-/// 変調を届ける列。All はオンの列すべて。
+/// 変調を届ける列。All はオンの列すべて。A〜D は Oscillator 1〜4 と同じ並び。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Enum)]
 pub enum ModChain {
     #[id = "all"]
@@ -39,7 +44,11 @@ pub enum ModChain {
 }
 
 impl ModChain {
+    /// `index` が 0 なら A、1 なら B。この Chain がその列へ届くか。
+    ///
+    /// `self` は値のコピーを受け取る。小さな列挙型なので所有しても軽い。
     pub fn includes(self, index: usize) -> bool {
+        // `match` は取りうる形ごとに分岐する。
         match self {
             ModChain::All => index < 4,
             ModChain::A => index == 0,
@@ -76,9 +85,12 @@ pub struct ModSource {
 }
 
 /// ソースを 4 列へ振り分ける。同じ行き先は足す。
+///
+/// `&[ModSource]` の `&` はスライスを借りる印。中身は動かさない。
 pub fn fold(sources: &[ModSource]) -> [ColumnMod; 4] {
     let mut columns = [ColumnMod::default(); 4];
     for source in sources {
+        // NaN や無限大は、変調を 0 として扱う。出力へ広げない。
         let depth = if source.depth.is_finite() {
             source.depth
         } else {

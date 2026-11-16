@@ -4,6 +4,7 @@
 //! 計算は 2 極のゼロディレイ・フィードバック。Lowpass、Highpass、Bandpass、Notch を、同じ状態から読み分ける。
 //! Drive はそのあとに tanh で歪ませる。この経路だけ、サンプルを 2 倍の速さで計算する。
 //! Amount は鍵盤が Cutoff を追う量で、結果はノブへ書き戻さない。
+//! 音の 1 サンプルは `Filter::next_sample` が進める。
 
 use std::f32::consts::{FRAC_1_SQRT_2, PI};
 use std::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
@@ -254,7 +255,9 @@ impl Filter {
         self.down_right.reset();
     }
 
-    /// 左右 1 サンプル。`note` が `None` のときは、基準のノート 60 として Amount を計算する。
+    /// 左右 1 サンプルを通す。`&mut self` はフィルター状態を進めるため。
+    ///
+    /// `note` が `None` のときは、基準のノート 60 として Amount を計算する。
     /// `touch.octaves` は Filter Env と割り当てのオクターブ合計。ノブには書き戻さない。
     pub fn next_sample(
         &mut self,

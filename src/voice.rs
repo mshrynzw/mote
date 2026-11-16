@@ -3,6 +3,7 @@
 //! Polyphony はそのうち同時に押せる数。Mono は 1 ノートだけ。
 //! オンのオシレーターは、Unison を混ぜてから自分のフィルターと Amp Env を通る。
 //! 鳴っていないノートと、オフのオシレーターは計算しない。
+//! 左右 1 サンプルは `Voices::next_sample` が進める。`engine` から呼ばれる。
 
 use crate::assign::{amp_gain, fold, ModSource};
 use crate::envelope::{synced_amp, AmpEnvelope, AmpParams};
@@ -208,6 +209,8 @@ impl NoteVoice {
     }
 
     /// 左右 1 サンプル。`pitch_semitones` は Transpose とベンドの合計。
+    ///
+    /// 鳴っていなければすぐ `(0, 0)`。オンの列だけ Osc → Filter → Amp を通す。
     pub(crate) fn next_sample(
         &mut self,
         chain: &ChainParams<'_>,
@@ -378,12 +381,15 @@ impl KeyStack {
 
 /// 16 ノート分。波形表は 1 つを共有する。
 pub struct Voices {
+    /// 起動時に確保したノート枠。鳴っていない枠は `next_sample` でほぼ飛ばす。
     slots: [NoteVoice; MAX_NOTES],
     stack: KeyStack,
     bank: WaveBank,
     sample_rate: f32,
     next_age: u64,
+    /// ピッチベンド。0.5 が中央。
     bend: f32,
+    /// ノートが無いときも動かす LFO。Free Run 用。
     free_lfos: [LfoPhase; 4],
     free_wave: [f32; 4],
     bpm: f32,
@@ -396,6 +402,7 @@ pub struct Voices {
 }
 
 impl Voices {
+    /// 起動時に枠と波形表を用意する。発音中はここを呼ばない。
     pub fn new() -> Self {
         let volume = Smoother::new(SmoothingStyle::Linear(10.0));
         volume.reset(0.0);
@@ -552,7 +559,10 @@ impl Voices {
     }
 
     /// 左右 1 サンプル。Master Volume は、鳴っているノートを足したあとで掛ける。
+    ///
+    /// `&mut self` は各ノートと LFO を進めるため。`chain` は今のノブを借りた束。
     pub fn next_sample(&mut self, chain: &ChainParams<'_>, master: &MasterParams) -> (f32, f32) {
+        // ノートが無くても LFO は進める（Free Run）。
         for index in 0..4 {
             let lfo = synced_lfo(index, chain.lfos);
             let hz = lfo_hz(
@@ -595,6 +605,7 @@ impl Voices {
         let gain = nice_plug::util::db_to_gain(self.volume.next());
         let left = left * gain;
         let right = right * gain;
+        // NaN や無限大は出力へ広げない。
         (
             if left.is_finite() { left } else { 0.0 },
             if right.is_finite() { right } else { 0.0 },

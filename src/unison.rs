@@ -2,6 +2,7 @@
 //!
 //! 横が Pan、縦が Detune。交点が中央。
 //! 8 Voice でも、左端に 4 つ、右端に 4 つとは置かない。
+//! `oscillator` が各 Voice のパンとセントを、ここから計算する。
 
 /// `count` 本のうち `index` 番の位置。範囲は -1 より大きく、1 より小さい。
 ///
@@ -22,6 +23,7 @@ pub fn unison_offset(index: usize, count: usize) -> f32 {
 /// いちばん外側が ±`detune_cents` になる。内側はそれに比例する。
 pub fn unison_cents(index: usize, count: usize, detune_cents: f32) -> f32 {
     let offset = unison_offset(index, count);
+    // いちばん外側の |offset|。0 なら Voice が 1 本だけ。
     let edge = unison_offset(0, count).abs();
     if edge == 0.0 {
         0.0

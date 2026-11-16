@@ -1,9 +1,11 @@
 //! ホストに見せるノブ。
 //!
 //! ID は `o1_octave` のように固定する。一度出したら、名前を変えても ID は変えない。
+//! `engine` と `voice` は、ここから列ごとの参照を借りて読む。
 
 use nice_plug::prelude::*;
 
+// Sync 用の hub を 4 基で共有するためのポインタ。
 use std::sync::Arc;
 
 use crate::envelope::{bind_amp_sync, AmpParams, AmpSyncHub};
@@ -14,6 +16,7 @@ use crate::master::MasterParams;
 use crate::mod_env::{bind_mod_env_sync, ModEnvParams, ModEnvSyncHub};
 use crate::oscillator::OscParams;
 
+/// プラグイン全体のノブ。`id_prefix` がホストに見える ID の先頭になる。
 #[derive(Params)]
 pub struct MoteParams {
     #[nested(id_prefix = "o1", group = "A Oscillator")]

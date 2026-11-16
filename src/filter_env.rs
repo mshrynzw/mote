@@ -2,6 +2,7 @@
 //!
 //! 時間の計算は Amp Env と同じ。動かすのは音量ではなく、Cutoff のオクターブ。
 //! Amount が 0% のあいだは、Cutoff ノブの位置を変えない。結果はノブへ書き戻さない。
+//! 1 サンプルの足し分は `FilterEnv::next_octaves` が進める。
 
 use std::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
 use std::sync::Arc;
@@ -9,6 +10,7 @@ use std::sync::Arc;
 use nice_plug::params::InternalParamMut;
 use nice_plug::prelude::*;
 
+// 時間の進みは Amp Env と同じ型を借りる。音量には掛けない。
 use crate::envelope::{AmpEnvelope, AmpSettings};
 
 /// 100% のとき、エンベロープの頂点で Cutoff が上がるオクターブ数。

@@ -1,10 +1,11 @@
 //! ノコギリ、パルス、三角を、周波数帯ごとの表で読む。
 //!
-//! 表は `activate` で一度だけ作る。発音中は表を読むだけ。
-//! サインは倍音が無いので、この表には入れない。
+//! 表は `activate`（サンプルレート確定時）で一度だけ作る。発音中は表を読むだけ。
+//! サインは倍音が無いので、この表には入れない。`oscillator` が `read` を呼ぶ。
 
 use std::f32::consts::{PI, TAU};
 
+/// 1 周期のサンプル数。2 の累乗なので、添字のラップにビットマスクが使える。
 const LEN: usize = 2048;
 const LEN_MASK: usize = LEN - 1;
 
@@ -23,6 +24,7 @@ pub struct WaveBank {
 }
 
 impl WaveBank {
+    /// 起動時に全 mip を作る。発音中は呼ばない。
     pub fn new(sample_rate: f32) -> Self {
         let mut saw = Vec::new();
         let mut pulse = Vec::new();
@@ -54,6 +56,8 @@ impl WaveBank {
     }
 
     /// 位相 `phase`（0 以上 2^32 未満で 1 周）から、その周波数に合う表を読む。
+    ///
+    /// `&self` は表を借りるだけ。発音中は数値の読み取りのみ。
     pub fn read(&self, shape: TableShape, phase: u32, frequency_hz: f32) -> f32 {
         let mips = match shape {
             TableShape::Saw => &self.saw,

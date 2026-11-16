@@ -2,19 +2,21 @@
 //!
 //! Attack、Decay、Release は時間をかけて値が動く。
 //! Sustain は押しているあいだの高さを保つ。ここは平坦なので、Sustain Curve はノブとして残し、音の高さ自体は曲げない。
-//! 発音中にメモリは確保しない。
+//! 発音中にメモリは確保しない。音量の 1 サンプルは `AmpEnvelope::next` が進める。
 //!
 //! Sync は変調の書き戻しではない。利用者が A の Sync をオンにして B、C、D を選んだときだけ、ノブの値をコピーする。
 
 use std::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
 use std::sync::Arc;
 
+// Sync のコピーで、ノブ内部の値を書き換えるときに使う。
 use nice_plug::params::InternalParamMut;
 use nice_plug::prelude::*;
 
 /// エンベロープの今の区間。
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Stage {
+    /// 止まっている。出力は 0。
     Idle,
     Attack,
     Decay,
@@ -22,6 +24,7 @@ enum Stage {
     Release,
 }
 
+/// 1 列分の Amp Env の状態。ノブ自体は `AmpParams` が持つ。
 pub struct AmpEnvelope {
     stage: Stage,
     /// 今の区間の進み。0 が始まり、1 が終わり。
@@ -73,6 +76,8 @@ impl AmpEnvelope {
     }
 
     /// 1 サンプル進めて、0 から 1 付近の音量を返す。
+    ///
+    /// `&mut self` は区間と高さを書き換えるため。
     pub fn next(&mut self, settings: AmpSettings, sample_rate: f32) -> f32 {
         // 時間が 0 の区間は、その場で次へ進む。最大でも数回なので、ループは短い。
         for _ in 0..4 {

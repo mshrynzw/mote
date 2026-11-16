@@ -1,8 +1,10 @@
-//! Main 画面。
+//! Main 画面（nice-plug 用）。
 //!
 //! ブラウザの HTML はプラグインに埋め込まない。色と並びだけを egui で描き直す。
 //! 音は Filter が 1 基なので、画面も 1 基である。2 基目は Phase 5 の音のあと。
+//! WRAC の画面は `third_party/.../gui` 側。ここは `lib.rs` の `Plugin::editor` からだけ使う。
 
+// ノブ一覧を画面と共有する。
 use std::sync::Arc;
 
 use nice_plug::context::gui::GuiContext;
@@ -29,7 +31,7 @@ const INK: Color32 = Color32::from_rgb(241, 241, 241);
 const LINE: Color32 = Color32::from_rgb(164, 182, 183);
 const ON: Color32 = Color32::from_rgb(159, 197, 233);
 const LETTERS: [&str; 4] = ["A", "B", "C", "D"];
-/// 設計図の A〜D と同じ順。Oscillator、Filter、Filter Env、Amp Env。
+/// 設計図の A〜D と同じ順。Oscillator、Filter、Filter Env、Amp Env。幅は論理ピクセル。
 const OSC_W: f32 = 292.0;
 const FILTER_W: f32 = 210.0;
 const FILTER_ENV_W: f32 = 268.0;
@@ -40,15 +42,16 @@ const COL_GAP: f32 = 10.0;
 /// 開いている画面の状態。ノブの値そのものは `params` が持つ。
 pub struct MoteGui {
     params: Arc<MoteParams>,
-    /// ウィンドウが開いたあと、ノブを動かすために使う。
+    /// ウィンドウが開いたあと、ノブを動かすために使う。まだなら `None`。
     gui: Option<GuiContext>,
-    /// `None` は ALL。`Some` はその列だけ。
+    /// `None` は ALL。`Some(0)` は A 列だけ。
     chain: Option<usize>,
+    /// いま選んでいる Mod Env / LFO の番号（0 が A）。
     mod_env: usize,
     lfo: usize,
 }
 
-/// プラグインの Main 画面を作る。
+/// プラグインの Main 画面を作る。失敗したら `None`。
 pub fn create(params: Arc<MoteParams>, state: Arc<EguiEditorState>) -> Option<MoteEditor> {
     create_egui_editor(
         state,
@@ -73,6 +76,7 @@ pub fn initial_state() -> Arc<EguiEditorState> {
 }
 
 impl NiceEguiApp for MoteGui {
+    /// ウィンドウが開いたときに 1 回。色とフォントを入れる。
     fn build(
         &mut self,
         egui_ctx: egui::Context,
@@ -90,7 +94,9 @@ impl NiceEguiApp for MoteGui {
         Ok(())
     }
 
+    /// 毎フレームの描画。音は出さない。ノブ操作だけをホストへ伝える。
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut nice_plug_egui::Frame) {
+        // `build` 前は GuiContext が無いので何もしない。
         let Some(gui) = self.gui.clone() else {
             return;
         };

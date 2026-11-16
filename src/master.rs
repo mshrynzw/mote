@@ -1,7 +1,9 @@
 //! Master。4 本の列を混ぜたあとの音量と、全ノートに共通の音程。
 //!
 //! Polyphony は MIDI ノートの数。オシレーターの Unison とは別である。
+//! `voice` がノート数の上限とベンド半音を、ここから読む。
 
+// ホストへ出すノブ型をまとめて読み込む。
 use nice_plug::prelude::*;
 
 /// 同時に持てる MIDI ノートの上限。Polyphony の最大と同じ。
@@ -17,6 +19,8 @@ pub enum PlayMode {
 }
 
 /// ホストに出す Master のノブ。ID は `master_volume` のようになる。
+///
+/// `#[derive(Params)]` は、nice-plug がホストへ一覧を渡すための印。
 #[derive(Params)]
 pub struct MasterParams {
     #[id = "volume"]

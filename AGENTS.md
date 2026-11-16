@@ -6,8 +6,9 @@
 
 - 商品名は Mote。クレート名とフォルダ名は `mote`
 - 対象は Windows 11。確認用 DAW は Cubase 13 と FL Studio
-- プラグイン形式は VST3。枠は nice-plug。CLAP も一緒に出す
-- Audio Unit は Mac が手に入ってから、clap-wrapper で CLAP を包む
+- プラグイン形式は VST3。枠は WRAC（`third_party/wrac-plugin-template`）。音のエンジンはルートの `src/`（クレート `mote`）
+- nice-plug はエンジン側に残る別ルートである。いま DAW で出す本体の枠ではない
+- CLAP も一緒に出す。Audio Unit は Mac が手に入ってから、clap-wrapper で CLAP を包む
 - 言語は Rust。C++ や VST2 SDK では書かない
 
 ## 音の処理
@@ -32,7 +33,9 @@
 
 - Phase の大枠は [docs/design.md](docs/design.md) に従う。いまの Phase より先は実装しない
 - 完了条件は [docs/requirements.md](docs/requirements.md)、作業の区切りは [docs/schedule.md](docs/schedule.md) に従う。予定の日付が空でも、いまの Phase より先は実装しない
+- コードの地図と読み順は [docs/code-map.md](docs/code-map.md) に従う
 - 音の骨格を変えるときは [docs/design.md](docs/design.md) も更新する
+- `src/` にモジュールを足す・役割を大きく変えるとき、または WRAC の Mote 入口（`plugins/mote/src-plugin`）を増やすときは [docs/code-map.md](docs/code-map.md) も更新する。`third_party` のテンプレ内部までは対象にしない
 - 画面は WRAC で作る。見た目は [design-mock](design-mock) と完全一致させる。背景の光と粒子、そして動きも含み完全一致させる。Filter の 2 基目だけは、Phase 5 の音が入ってからプラグインの画面に描く
 - [docs/ideas.md](docs/ideas.md) は思いつきのメモである。設計と要件より優先しない。実装の根拠にしない
 - 資料の間で矛盾があったら、推測で埋めずに確認する

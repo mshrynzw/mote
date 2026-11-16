@@ -34,4 +34,5 @@ Audio Unit は、Mac が手に入ってから対応します。
 ## 開発の決定
 
 新しいチャットでも守る事項は [AGENTS.md](AGENTS.md)、音の骨格は [docs/design.md](docs/design.md) にあります。
+`src/` と WRAC の分担、ファイルの役割と読み順は [docs/code-map.md](docs/code-map.md) にあります。
 思いつきは [docs/ideas.md](docs/ideas.md) に残します。設計や要件ではありません。
